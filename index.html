@@ -148,6 +148,42 @@
   .det .linha b{min-width:96px}
   .det .bonecobig{width:120px;aspect-ratio:1;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff;margin:0 auto}
 
+  /* ---------- ARMÁRIO (móvel de arquivo, igual ao original) ---------- */
+  .grade-cab{display:grid;gap:26px;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));align-items:end}
+  @keyframes pop{0%{transform:scale(.96)}100%{transform:scale(1)}}
+  .cab{position:relative;cursor:pointer;animation:pop .2s ease}
+  .cab .plate{position:relative;z-index:4;margin:0 auto -7px;width:88%;background:#f3ecd8;border:3px solid var(--tinta);border-radius:6px;
+    transform:rotate(-1.3deg);box-shadow:2px 2px 0 var(--tinta);padding:5px 8px;text-align:center;font-family:'Patrick Hand',cursive;
+    font-size:18px;line-height:1.1;word-break:break-word}
+  .cab .body{border:3px solid var(--tinta);border-radius:8px;box-shadow:5px 5px 0 var(--tinta);padding:15px 13px 12px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(0,0,0,.04) 28%,rgba(0,0,0,.2)),var(--tint)}
+  .cab .front{height:40px;margin-bottom:10px;border:2.5px solid rgba(0,0,0,.42);border-radius:6px;display:grid;place-items:center;
+    background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,.16))}
+  .cab .front:last-child{margin-bottom:0}
+  .cab .front .knob{width:46px;height:10px;border-radius:6px;background:rgba(0,0,0,.4);border:2px solid rgba(0,0,0,.5)}
+  .cab .del{position:absolute;top:-10px;right:-10px;width:26px;height:26px;border-radius:50%;background:#cf5c4b;color:#fff;
+    border:3px solid var(--tinta);font-weight:800;font-size:15px;cursor:pointer;z-index:6;line-height:1}
+  .cab .meta{text-align:center;font-size:12px;font-weight:800;color:#3a362f;margin-top:7px;font-family:'Patrick Hand',cursive}
+  .add-cab{min-height:184px;border:3px dashed var(--tinta);border-radius:8px;background:rgba(255,255,255,.28);
+    font-family:'Patrick Hand',cursive;font-size:20px;color:var(--tinta);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .add-cab:active{transform:translate(2px,2px)}
+
+  /* ---------- CABINET ABERTO com as GAVETAS (remessas) ---------- */
+  .cabinet-open{max-width:780px;margin:0 auto}
+  .cabinet-open h2{font-family:'Bangers',cursive;font-size:34px;letter-spacing:1px;margin:0 0 12px}
+  .painel-cab{border:3px solid var(--tinta);border-radius:12px;box-shadow:6px 6px 0 var(--tinta);padding:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(0,0,0,.05) 20%,rgba(0,0,0,.18)),var(--tint)}
+  .painel-cab .vaziocab{text-align:center;color:#f6f1e3;font-family:'Patrick Hand',cursive;font-size:18px;padding:6px 0 14px;text-shadow:1px 1px 0 rgba(0,0,0,.35)}
+  .drawer{position:relative;display:flex;align-items:center;gap:14px;padding:0 14px;min-height:62px;border:3px solid var(--tinta);border-radius:8px;
+    margin-bottom:12px;background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(0,0,0,.16));box-shadow:3px 3px 0 var(--tinta);cursor:pointer;animation:pop .2s ease}
+  .drawer .knob{width:62px;height:13px;border-radius:7px;background:rgba(0,0,0,.42);border:2px solid rgba(0,0,0,.55);flex:none}
+  .drawer .tag{flex:1;min-width:0;background:#f3ecd8;border:2.5px solid var(--tinta);border-radius:6px;transform:rotate(-.6deg);
+    box-shadow:2px 2px 0 var(--tinta);padding:5px 10px;font-family:'Patrick Hand',cursive;font-size:18px;color:var(--tinta);word-break:break-word}
+  .drawer .dmeta{font-size:12px;font-weight:800;color:#2a2620;font-family:'Patrick Hand',cursive;white-space:nowrap;flex:none}
+  .drawer .del{width:26px;height:26px;border-radius:50%;background:#cf5c4b;color:#fff;border:2.5px solid var(--tinta);font-weight:800;cursor:pointer;flex:none;line-height:1}
+  .add-drawer{width:100%;min-height:52px;border:3px dashed var(--tinta);border-radius:8px;background:rgba(255,255,255,.32);
+    font-family:'Patrick Hand',cursive;font-size:18px;color:var(--tinta);cursor:pointer}
+
   /* ---------- carimbos / documento ---------- */
   .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:180px;overflow:hidden;margin-top:6px;
     background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,0,0,.05) 26px 27px);box-shadow:inset 0 0 0 2px #fff}
@@ -479,6 +515,7 @@ async function abrirRemessa(rem){
    ARMÁRIOS  (nível de cima — o móvel de arquivo)
    =================================================================== */
 async function renderArmarios(){
+  elConteudo.className = 'grade-cab';
   elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
   const { data:arms, error } = await sb.from('armarios').select('*').eq('arquivada',false).order('criado_em',{ascending:false});
   if(error){ toast('Erro ao carregar: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
@@ -488,22 +525,27 @@ async function renderArmarios(){
     const { data:rs } = await sb.from('remessas').select('armario_id').in('armario_id',ids).eq('arquivada',false);
     (rs||[]).forEach(r=> cont[r.armario_id]=(cont[r.armario_id]||0)+1);
   }
-  let html = `<button class="add" id="add-arm"><span>＋</span>Novo armário</button>`;
+  let html = '';
   if(!arms.length){
-    html += `<div class="vazio"><div class="balao">Nenhum armário criado.<br>Toque em <b>＋ Novo armário</b> para começar.</div></div>`;
+    html += `<div class="vazio" style="grid-column:1/-1"><div class="balao">Nenhum armário criado.<br>Toque em <b>＋ Novo armário</b> para começar.</div></div>`;
   }
   arms.forEach(a=>{
     const n = cont[a.id]||0;
-    html += `<div class="armario" data-id="${a.id}">
-      <button class="lixo" data-del="${a.id}" title="Apagar armário">🗑️</button>
-      <div class="capa-arm" style="background:${esc(a.cor||'#8e5bd9')}"><div class="gav"></div><div class="gav"></div><div class="gav"></div></div>
-      <div class="nome">${esc(a.nome)}</div>
-      <div class="qtd">${n} ${n===1?'remessa':'remessas'}</div>
+    html += `<div class="cab" data-id="${a.id}" style="--tint:${esc(a.cor||'#8e5bd9')}">
+      <button class="del" data-del="${a.id}" title="Apagar armário">×</button>
+      <div class="plate">${esc(a.nome)}</div>
+      <div class="body">
+        <div class="front"><div class="knob"></div></div>
+        <div class="front"><div class="knob"></div></div>
+        <div class="front"><div class="knob"></div></div>
+      </div>
+      <div class="meta">${n} ${n===1?'remessa':'remessas'}</div>
     </div>`;
   });
+  html += `<button class="add-cab" id="add-arm">＋ Novo armário</button>`;
   elConteudo.innerHTML = html;
   $('#add-arm').onclick = formArmario;
-  elConteudo.querySelectorAll('.armario').forEach(c=>{
+  elConteudo.querySelectorAll('.cab').forEach(c=>{
     c.addEventListener('click', e=>{
       if(e.target.closest('[data-del]')) return;
       abrirArmario(arms.find(x=>x.id===c.dataset.id));
@@ -564,6 +606,7 @@ async function apagarArmario(arm){
    REMESSAS  (nível do meio — as gavetas do armário)
    =================================================================== */
 async function renderRemessas(arm){
+  elConteudo.className = '';
   elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
   const { data:rem, error } = await sb.from('remessas').select('*').eq('armario_id',arm.id).eq('arquivada',false).order('criado_em',{ascending:false});
   if(error){ toast('Erro ao carregar: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
@@ -573,22 +616,28 @@ async function renderRemessas(arm){
     const { data:gs } = await sb.from('guias').select('remessa_id').in('remessa_id',ids).eq('arquivada',false);
     (gs||[]).forEach(g=> cont[g.remessa_id]=(cont[g.remessa_id]||0)+1);
   }
-  let html = `<button class="add" id="add-rem"><span>＋</span>Nova remessa</button>`;
+  let drawers = '';
   if(!rem.length){
-    html += `<div class="vazio"><div class="balao">Nenhuma remessa neste armário.<br>Toque em <b>＋ Nova remessa</b> para começar.</div></div>`;
+    drawers += `<div class="vaziocab">Armário vazio. Adicione a primeira remessa (gaveta) abaixo.</div>`;
   }
   rem.forEach(r=>{
     const n = cont[r.id]||0;
-    html += `<div class="armario" data-id="${r.id}">
-      <button class="lixo" data-del="${r.id}" title="Apagar remessa">🗑️</button>
-      <div class="capa" style="background:${esc(r.cor||'#e9b24a')}">🗂️</div>
-      <div class="nome">${esc(r.nome)}</div>
-      <div class="qtd">${n} ${n===1?'guia':'guias'}</div>
+    drawers += `<div class="drawer" data-id="${r.id}">
+      <div class="knob"></div>
+      <div class="tag">${esc(r.nome)}</div>
+      <div class="dmeta">${n} ${n===1?'guia':'guias'}</div>
+      <button class="del" data-del="${r.id}" title="Apagar remessa">×</button>
     </div>`;
   });
-  elConteudo.innerHTML = html;
+  elConteudo.innerHTML = `<div class="cabinet-open">
+    <h2>${esc(arm.nome)}</h2>
+    <div class="painel-cab" style="--tint:${esc(arm.cor||'#8e5bd9')}">
+      ${drawers}
+      <button class="add-drawer" id="add-rem">＋ Nova remessa</button>
+    </div>
+  </div>`;
   $('#add-rem').onclick = ()=> formRemessa(arm);
-  elConteudo.querySelectorAll('.armario').forEach(c=>{
+  elConteudo.querySelectorAll('.drawer').forEach(c=>{
     c.addEventListener('click', e=>{
       if(e.target.closest('[data-del]')) return;
       abrirRemessa(rem.find(x=>x.id===c.dataset.id));
@@ -646,6 +695,7 @@ async function apagarRemessa(rem){
    GUIAS  (pastas)
    =================================================================== */
 async function renderGuias(rem){
+  elConteudo.className = 'grade';
   elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
   const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false).order('criado_em',{ascending:false});
   if(error){ toast('Erro: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
@@ -653,6 +703,7 @@ async function renderGuias(rem){
 }
 
 function pintarGuias(guias, opts={}){
+  elConteudo.className = 'grade';
   let html = '';
   if(opts.addPara){
     html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
