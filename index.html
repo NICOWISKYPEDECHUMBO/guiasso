@@ -445,11 +445,17 @@ $('#a-esqueci').onclick = async ()=>{
 };
 
 let recuperando = false;
+let logado = false;   // já está dentro do app? (evita voltar pra home sozinho a cada renovação de sessão)
 sb.auth.onAuthStateChange((ev, session)=>{
   if(ev === 'PASSWORD_RECOVERY'){ recuperando = true; USER = session?.user||null; telaNovaSenha(); return; }
   if(recuperando) return;              // segura o app até a nova senha ser criada
-  if(session && session.user){ USER = session.user; entrarNoApp(); }
-  else { USER = null; elApp.classList.add('hide'); elAuth.classList.remove('hide'); }
+  if(session && session.user){
+    USER = session.user;               // mantém o usuário atualizado (renovação de token etc.)
+    if(!logado) entrarNoApp();         // só entra (e vai pra home) na PRIMEIRA vez
+  } else {
+    logado = false; USER = null;
+    elApp.classList.add('hide'); elAuth.classList.remove('hide');
+  }
 });
 
 function telaNovaSenha(){
@@ -477,6 +483,7 @@ function telaNovaSenha(){
 }
 
 async function entrarNoApp(){
+  logado = true;
   $('#u-email').textContent = USER.email || '';
   elAuth.classList.add('hide'); elApp.classList.remove('hide');
   armarioAtual = null; remessaAtual = null;
@@ -950,7 +957,7 @@ async function onBusca(){
   // Se veio de um link de recuperação de senha, deixa o onAuthStateChange abrir a tela certa
   if((window.location.hash||'').includes('type=recovery')) return;
   const { data:{ session } } = await sb.auth.getSession();
-  if(session && session.user){ USER = session.user; entrarNoApp(); }
+  if(session && session.user && !logado){ USER = session.user; entrarNoApp(); }
 })();
 </script>
 </body>
