@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:ital,wght@0,400;0,700;0,800;1,700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fvwpgftwoqrxwcoxgjje.supabase.co" crossorigin>
 <style>
   :root{
     --tinta:#1a1714;        /* preto contorno   */
@@ -83,6 +85,9 @@
     padding:14px;display:flex;flex-direction:column;gap:10px;cursor:pointer;position:relative;transition:transform .06s}
   .armario:active{transform:translate(2px,2px)}
   .armario .capa{height:70px;border:3px solid var(--tinta);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:34px}
+  .capa-arm{height:78px;border:3px solid var(--tinta);border-radius:8px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:8px 10px}
+  .capa-arm .gav{height:15px;background:rgba(255,255,255,.4);border:2px solid var(--tinta);border-radius:4px;position:relative}
+  .capa-arm .gav::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:16px;height:3px;background:var(--tinta);border-radius:2px}
   .armario .nome{font-family:'Bangers',cursive;font-size:22px;line-height:1;word-break:break-word}
   .armario .qtd{font-family:'Patrick Hand',cursive;font-size:14px;opacity:.8}
   .armario .lixo{position:absolute;top:8px;right:8px;background:var(--creme);border:2px solid var(--tinta);border-radius:8px;
@@ -143,6 +148,35 @@
   .det .linha b{min-width:96px}
   .det .bonecobig{width:120px;aspect-ratio:1;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff;margin:0 auto}
 
+  /* ---------- carimbos / documento ---------- */
+  .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:180px;overflow:hidden;margin-top:6px;
+    background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,0,0,.05) 26px 27px);box-shadow:inset 0 0 0 2px #fff}
+  .paper .vazp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Patrick Hand',cursive;opacity:.4;font-size:15px}
+  .carimbo{position:absolute;transform:translate(-50%,-50%) rotate(var(--r));text-align:center;pointer-events:none;
+    border:3px double var(--ink);color:var(--ink);border-radius:10px;padding:3px 10px 2px;background:rgba(255,255,255,.06);
+    opacity:.92;filter:contrast(1.05);text-shadow:0 0 1px var(--ink)}
+  .carimbo .lb{font-family:'Bangers',cursive;letter-spacing:1px;font-size:19px;display:block;white-space:nowrap;line-height:1}
+  .carimbo .dt{font-family:'Nunito',sans-serif;font-size:9px;font-weight:800;letter-spacing:0}
+  .carimbo.novo{animation:bater .3s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes bater{0%{transform:translate(-50%,-50%) rotate(var(--r)) scale(1.7);opacity:0}
+    55%{opacity:1}70%{transform:translate(-50%,-50%) rotate(var(--r)) scale(.9)}
+    100%{transform:translate(-50%,-50%) rotate(var(--r)) scale(1);opacity:.92}}
+  .stamper{position:absolute;left:50%;top:42%;z-index:5;pointer-events:none;text-align:center}
+  .stamper .cabo{width:16px;height:24px;background:var(--tinta);border-radius:4px;margin:0 auto 3px}
+  .stamper .face{border:3px double var(--ink);color:var(--ink);border-radius:10px;padding:3px 12px;font-family:'Bangers',cursive;
+    font-size:22px;letter-spacing:1px;background:#fff;white-space:nowrap}
+  .stamper.desce{animation:desce .3s ease-out forwards}
+  @keyframes desce{0%{transform:translate(-50%,-150%) scale(1.12);opacity:0}60%{opacity:1}
+    82%{transform:translate(-50%,-46%) scale(.95)}100%{transform:translate(-50%,-50%) scale(1)}}
+  .shake{animation:shk .18s 1}
+  @keyframes shk{0%,100%{transform:none}25%{transform:translateY(2px)}50%{transform:translateX(-2px)}75%{transform:translateY(-1px)}}
+  .paleta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .cbtn{border:3px solid var(--tinta);border-radius:10px;padding:7px 10px;font-family:'Bangers',cursive;letter-spacing:.5px;font-size:15px;
+    background:#fff;color:var(--ink);box-shadow:var(--sombra-p);line-height:1}
+  .cbtn:active{transform:translate(3px,3px);box-shadow:0 0 0}
+  .selo-tag{font-family:'Bangers',cursive;letter-spacing:.5px;font-size:12px;border:2px solid var(--ink);color:var(--ink);
+    border-radius:6px;padding:1px 6px;background:#fff}
+
   /* toast */
   #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
   .toast{background:var(--tinta);color:#fff;font-weight:800;border-radius:12px;padding:10px 16px;box-shadow:var(--sombra-p);
@@ -181,6 +215,7 @@
       <button id="a-entrar" class="btn grande azul" style="flex:1;justify-content:center">Entrar</button>
       <button id="a-criar" class="btn grande branco" style="flex:1;justify-content:center">Criar conta</button>
     </div>
+    <button id="a-esqueci" style="margin-top:14px;background:none;border:0;color:var(--tinta);font-weight:800;text-decoration:underline dotted;font-size:14px;cursor:pointer">Esqueci minha senha</button>
   </div>
 </div>
 
@@ -209,8 +244,9 @@
 <div id="toast"></div>
 <div id="modais"></div>
 
-<script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const { createClient } = supabase;
 
 /* ===== Conexão com o SEU Supabase ===== */
 const SUPABASE_URL = 'https://fvwpgftwoqrxwcoxgjje.supabase.co';
@@ -222,7 +258,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = s => document.querySelector(s);
 const elAuth = $('#auth'), elApp = $('#app'), elConteudo = $('#conteudo'), elMigalha = $('#migalha');
 let USER = null;
-let remessaAtual = null;        // objeto remessa aberta (ou null = home)
+let armarioAtual = null;        // objeto armário aberto (ou null)
+let remessaAtual = null;        // objeto remessa aberta (ou null)
 
 /* ===== toast ===== */
 function toast(msg, tipo=''){
@@ -236,6 +273,19 @@ function toast(msg, tipo=''){
 /* ===== escape ===== */
 const esc = s => (s??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dataBR = s => { if(!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+
+/* ===== carimbos ===== */
+const CARIMBOS = [
+  { t:'LANÇADO',      c:'#2f7d43' },
+  { t:'ENVIADO GEAP', c:'#2f6fd0' },
+  { t:'EM ANÁLISE',   c:'#b07d1a' },
+  { t:'DEVOLVIDO',    c:'#d9772f' },
+  { t:'DUPLICADO',    c:'#7a3fd0' },
+  { t:'CANCELADO',    c:'#c62f2f' },
+];
+const corCarimbo = t => (CARIMBOS.find(x=>x.t===t)||{c:'#333'}).c;
+const dataHora = ts => { const d=new Date(ts); const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 /* ===================================================================
    BONECO ALEATÓRIO (SVG desenhado a partir do "seed" salvo na guia)
@@ -332,24 +382,68 @@ $('#a-criar').onclick = async ()=>{
   if(!email||!password) return authErro('Preencha e-mail e senha.');
   if(password.length<6) return authErro('A senha precisa ter pelo menos 6 caracteres.');
   const b=$('#a-criar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
-  const { data, error } = await sb.auth.signUp({ email, password });
+  const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: window.location.origin } });
   b.disabled=false; b.textContent='Criar conta';
   if(error) return authErro(traduzErro(error.message));
+  // Por segurança, o Supabase NÃO dá erro quando o e-mail já existe:
+  // ele devolve o usuário sem "identities". Detectamos isso e bloqueamos.
+  if(data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+    return authErro('Esse e-mail já tem conta. Toque em Entrar ou use "Esqueci minha senha".');
+  }
   if(data.user && !data.session){
     authAviso('Conta criada! Enviamos um e-mail de confirmação — clique no link e depois toque em Entrar.');
-  } // se já tiver sessão, o onAuthStateChange entra direto
+  }
 };
 $('#u-sair').onclick = async ()=>{ await sb.auth.signOut(); };
 
-sb.auth.onAuthStateChange((_ev, session)=>{
+// Esqueci minha senha — envia link que funciona aqui ou em qualquer outro aparelho
+$('#a-esqueci').onclick = async ()=>{
+  limpaAuth();
+  const email=$('#a-email').value.trim();
+  if(!email) return authErro('Escreva seu e-mail no campo acima e toque de novo.');
+  const b=$('#a-esqueci'); b.disabled=true; const txt=b.textContent; b.textContent='Enviando…';
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  b.disabled=false; b.textContent=txt;
+  if(error) return authErro(traduzErro(error.message));
+  authAviso('Enviamos um link de recuperação pro seu e-mail. Abra em qualquer aparelho e crie uma senha nova.');
+};
+
+let recuperando = false;
+sb.auth.onAuthStateChange((ev, session)=>{
+  if(ev === 'PASSWORD_RECOVERY'){ recuperando = true; USER = session?.user||null; telaNovaSenha(); return; }
+  if(recuperando) return;              // segura o app até a nova senha ser criada
   if(session && session.user){ USER = session.user; entrarNoApp(); }
   else { USER = null; elApp.classList.add('hide'); elAuth.classList.remove('hide'); }
 });
 
+function telaNovaSenha(){
+  elAuth.classList.remove('hide'); elApp.classList.add('hide');
+  const o = abrirModal(`
+    <h2>Criar nova senha</h2>
+    <p style="font-family:'Patrick Hand',cursive;font-size:15px;margin-top:4px">Digite a senha nova que você vai usar a partir de agora.</p>
+    <div class="campo"><label>Nova senha</label>
+      <input id="ns" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres"></div>
+    <div id="ns-erro" class="erro hide"></div>
+    <div class="acoes"><button class="btn azul" id="ns-ok" style="flex:1;justify-content:center">Salvar nova senha</button></div>`);
+  o.querySelector('#ns').focus();
+  o.querySelector('#ns-ok').onclick = async ()=>{
+    const pass=o.querySelector('#ns').value, er=o.querySelector('#ns-erro');
+    if(pass.length<6){ er.textContent='A senha precisa ter pelo menos 6 caracteres.'; er.classList.remove('hide'); return; }
+    const b=o.querySelector('#ns-ok'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    const { error } = await sb.auth.updateUser({ password: pass });
+    if(error){ b.disabled=false; b.textContent='Salvar nova senha'; er.textContent=traduzErro(error.message); er.classList.remove('hide'); return; }
+    recuperando = false;
+    try{ history.replaceState(null,'',window.location.pathname); }catch(e){}
+    fecharModal(); toast('Senha alterada!','ok');
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session?.user){ USER=session.user; entrarNoApp(); }
+  };
+}
+
 async function entrarNoApp(){
   $('#u-email').textContent = USER.email || '';
   elAuth.classList.add('hide'); elApp.classList.remove('hide');
-  remessaAtual = null;
+  armarioAtual = null; remessaAtual = null;
   await irHome();
 }
 
@@ -360,27 +454,119 @@ $('#busca').addEventListener('input', debounce(onBusca, 300));
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
 
 async function irHome(){
-  remessaAtual = null;
+  armarioAtual = null; remessaAtual = null;
   $('#busca').value=''; $('#busca').placeholder='Buscar guia por nome ou nº…';
-  elMigalha.innerHTML = `<span>📦 Remessas</span>`;
-  await renderRemessas();
+  elMigalha.innerHTML = `<span>🗄️ Armários</span>`;
+  await renderArmarios();
+}
+async function abrirArmario(arm){
+  armarioAtual = arm; remessaAtual = null;
+  $('#busca').value=''; $('#busca').placeholder='Buscar guia neste armário…';
+  elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <span>🗂️ ${esc(arm.nome)}</span>`;
+  $('#v-home').onclick = irHome;
+  await renderRemessas(arm);
 }
 async function abrirRemessa(rem){
   remessaAtual = rem;
   $('#busca').value=''; $('#busca').placeholder='Buscar guia nesta remessa…';
-  elMigalha.innerHTML = `<a id="volta">📦 Remessas</a> <span>›</span> <span>🗂️ ${esc(rem.nome)}</span>`;
-  $('#volta').onclick = irHome;
+  elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <a id="v-arm">🗂️ ${esc(armarioAtual?.nome||'')}</a> <span>›</span> <span>📁 ${esc(rem.nome)}</span>`;
+  $('#v-home').onclick = irHome;
+  $('#v-arm').onclick = ()=> abrirArmario(armarioAtual);
   await renderGuias(rem);
 }
 
 /* ===================================================================
-   REMESSAS  (armários)
+   ARMÁRIOS  (nível de cima — o móvel de arquivo)
    =================================================================== */
-async function renderRemessas(){
+async function renderArmarios(){
   elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
-  const { data:rem, error } = await sb.from('remessas').select('*').eq('arquivada',false).order('criado_em',{ascending:false});
+  const { data:arms, error } = await sb.from('armarios').select('*').eq('arquivada',false).order('criado_em',{ascending:false});
   if(error){ toast('Erro ao carregar: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
-  // contagem de guias por remessa
+  const ids = arms.map(a=>a.id);
+  let cont = {};
+  if(ids.length){
+    const { data:rs } = await sb.from('remessas').select('armario_id').in('armario_id',ids).eq('arquivada',false);
+    (rs||[]).forEach(r=> cont[r.armario_id]=(cont[r.armario_id]||0)+1);
+  }
+  let html = `<button class="add" id="add-arm"><span>＋</span>Novo armário</button>`;
+  if(!arms.length){
+    html += `<div class="vazio"><div class="balao">Nenhum armário criado.<br>Toque em <b>＋ Novo armário</b> para começar.</div></div>`;
+  }
+  arms.forEach(a=>{
+    const n = cont[a.id]||0;
+    html += `<div class="armario" data-id="${a.id}">
+      <button class="lixo" data-del="${a.id}" title="Apagar armário">🗑️</button>
+      <div class="capa-arm" style="background:${esc(a.cor||'#8e5bd9')}"><div class="gav"></div><div class="gav"></div><div class="gav"></div></div>
+      <div class="nome">${esc(a.nome)}</div>
+      <div class="qtd">${n} ${n===1?'remessa':'remessas'}</div>
+    </div>`;
+  });
+  elConteudo.innerHTML = html;
+  $('#add-arm').onclick = formArmario;
+  elConteudo.querySelectorAll('.armario').forEach(c=>{
+    c.addEventListener('click', e=>{
+      if(e.target.closest('[data-del]')) return;
+      abrirArmario(arms.find(x=>x.id===c.dataset.id));
+    });
+  });
+  elConteudo.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=> apagarArmario(arms.find(x=>x.id===b.dataset.del));
+  });
+}
+
+function formArmario(){
+  const cores=['#8e5bd9','#4a90d9','#59b36a','#d9594a','#e9b24a','#3ec6c6'];
+  const o = abrirModal(`
+    <h2>Novo armário</h2>
+    <div class="campo"><label>Nome do armário</label>
+      <input id="a-nome" type="text" maxlength="120" placeholder="Ex: Armário 2026"></div>
+    <div class="campo"><label>Cor</label>
+      <div class="cores" id="a-cores">${cores.map((c,i)=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${i===0}"></div>`).join('')}</div></div>
+    <div id="a-err2" class="erro hide"></div>
+    <div class="acoes">
+      <button class="btn branco" data-x>Cancelar</button>
+      <button class="btn azul" id="a-salvar">Criar armário</button>
+    </div>`);
+  let cor = cores[0];
+  o.querySelectorAll('#a-cores .c').forEach(c=> c.onclick=()=>{
+    o.querySelectorAll('#a-cores .c').forEach(x=>x.setAttribute('aria-checked','false'));
+    c.setAttribute('aria-checked','true'); cor=c.dataset.cor;
+  });
+  o.querySelector('[data-x]').onclick = fecharModal;
+  o.querySelector('#a-nome').focus();
+  o.querySelector('#a-salvar').onclick = async ()=>{
+    const nome=o.querySelector('#a-nome').value.trim();
+    if(!nome){ o.querySelector('#a-err2').textContent='Dá um nome pro armário.'; o.querySelector('#a-err2').classList.remove('hide'); return; }
+    const b=o.querySelector('#a-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    const { error } = await sb.from('armarios').insert({ nome, cor });
+    if(error){ b.disabled=false; b.textContent='Criar armário'; o.querySelector('#a-err2').textContent=error.message; o.querySelector('#a-err2').classList.remove('hide'); return; }
+    fecharModal(); toast('Armário criado!','ok'); renderArmarios();
+  };
+}
+
+async function apagarArmario(arm){
+  if(!arm) return;
+  const ok = await confirmar('Apagar armário?', `Isso apaga o armário "${arm.nome}" e TODAS as remessas, guias e arquivos dentro dele. Não dá pra desfazer.`, 'Apagar tudo');
+  if(!ok) return;
+  const { data:rems } = await sb.from('remessas').select('id').eq('armario_id',arm.id);
+  const remIds = (rems||[]).map(r=>r.id);
+  if(remIds.length){
+    const { data:gs } = await sb.from('guias').select('arquivo_path').in('remessa_id',remIds);
+    const paths = (gs||[]).map(g=>g.arquivo_path).filter(Boolean);
+    if(paths.length) await sb.storage.from(BUCKET).remove(paths);
+  }
+  const { error } = await sb.from('armarios').delete().eq('id',arm.id); // remessas+guias caem por cascade
+  if(error){ toast('Erro: '+error.message,'bad'); return; }
+  toast('Armário apagado.','ok'); renderArmarios();
+}
+
+/* ===================================================================
+   REMESSAS  (nível do meio — as gavetas do armário)
+   =================================================================== */
+async function renderRemessas(arm){
+  elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
+  const { data:rem, error } = await sb.from('remessas').select('*').eq('armario_id',arm.id).eq('arquivada',false).order('criado_em',{ascending:false});
+  if(error){ toast('Erro ao carregar: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
   const ids = rem.map(r=>r.id);
   let cont = {};
   if(ids.length){
@@ -389,7 +575,7 @@ async function renderRemessas(){
   }
   let html = `<button class="add" id="add-rem"><span>＋</span>Nova remessa</button>`;
   if(!rem.length){
-    html += `<div class="vazio"><div class="balao">Nenhuma remessa criada.<br>Toque em <b>＋ Nova remessa</b> para começar.</div></div>`;
+    html += `<div class="vazio"><div class="balao">Nenhuma remessa neste armário.<br>Toque em <b>＋ Nova remessa</b> para começar.</div></div>`;
   }
   rem.forEach(r=>{
     const n = cont[r.id]||0;
@@ -401,11 +587,11 @@ async function renderRemessas(){
     </div>`;
   });
   elConteudo.innerHTML = html;
-  $('#add-rem').onclick = formRemessa;
+  $('#add-rem').onclick = ()=> formRemessa(arm);
   elConteudo.querySelectorAll('.armario').forEach(c=>{
     c.addEventListener('click', e=>{
       if(e.target.closest('[data-del]')) return;
-      const r = rem.find(x=>x.id===c.dataset.id); abrirRemessa(r);
+      abrirRemessa(rem.find(x=>x.id===c.dataset.id));
     });
   });
   elConteudo.querySelectorAll('[data-del]').forEach(b=>{
@@ -413,10 +599,11 @@ async function renderRemessas(){
   });
 }
 
-function formRemessa(){
+function formRemessa(arm){
   const cores=['#e9b24a','#4a90d9','#59b36a','#d9594a','#8e5bd9','#3ec6c6'];
   const o = abrirModal(`
     <h2>Nova remessa</h2>
+    <p style="font-size:14px;font-weight:700;opacity:.75">Armário: <b>${esc(arm.nome)}</b></p>
     <div class="campo"><label>Nome da remessa</label>
       <input id="r-nome" type="text" maxlength="120" placeholder="Ex: Remessa Agosto/2026"></div>
     <div class="campo"><label>Cor da capa</label>
@@ -437,9 +624,9 @@ function formRemessa(){
     const nome=o.querySelector('#r-nome').value.trim();
     if(!nome){ o.querySelector('#r-erro').textContent='Dá um nome pra remessa.'; o.querySelector('#r-erro').classList.remove('hide'); return; }
     const b=o.querySelector('#r-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
-    const { error } = await sb.from('remessas').insert({ nome, cor });
+    const { error } = await sb.from('remessas').insert({ nome, cor, armario_id: arm.id });
     if(error){ b.disabled=false; b.textContent='Criar remessa'; o.querySelector('#r-erro').textContent=error.message; o.querySelector('#r-erro').classList.remove('hide'); return; }
-    fecharModal(); toast('Remessa criada!','ok'); renderRemessas();
+    fecharModal(); toast('Remessa criada!','ok'); renderRemessas(arm);
   };
 }
 
@@ -447,13 +634,12 @@ async function apagarRemessa(rem){
   if(!rem) return;
   const ok = await confirmar('Apagar remessa?', `Isso apaga a remessa "${rem.nome}" e TODAS as guias e arquivos dentro dela. Não dá pra desfazer.`, 'Apagar tudo');
   if(!ok) return;
-  // apaga arquivos do storage primeiro
   const { data:gs } = await sb.from('guias').select('arquivo_path').eq('remessa_id',rem.id);
   const paths = (gs||[]).map(g=>g.arquivo_path).filter(Boolean);
   if(paths.length) await sb.storage.from(BUCKET).remove(paths);
-  const { error } = await sb.from('remessas').delete().eq('id',rem.id); // guias caem por cascade
+  const { error } = await sb.from('remessas').delete().eq('id',rem.id);
   if(error){ toast('Erro: '+error.message,'bad'); return; }
-  toast('Remessa apagada.','ok'); renderRemessas();
+  toast('Remessa apagada.','ok'); renderRemessas(armarioAtual);
 }
 
 /* ===================================================================
@@ -477,6 +663,8 @@ function pintarGuias(guias, opts={}){
       : 'Nenhuma guia nesta remessa.<br>Toque em <b>＋ Nova guia</b> para adicionar.'}</div></div>`;
   }
   guias.forEach(g=>{
+    const cs = (g.meta && g.meta.carimbos) || [];
+    const ult = cs.slice(-2).reverse();
     html += `<div class="pasta" data-id="${g.id}">
       <div class="aba"></div>
       <div class="corpo">
@@ -487,6 +675,7 @@ function pintarGuias(guias, opts={}){
           ${g.numero_guia?`<span class="tag">nº ${esc(g.numero_guia)}</span>`:''}
           ${g.arquivo_path?`<span class="tag clip">arquivo</span>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
         </div>
+        ${ult.length?`<div class="tags">${ult.map(c=>`<span class="selo-tag" style="--ink:${corCarimbo(c.t)}">${esc(c.t)}</span>`).join('')}</div>`:''}
       </div>
     </div>`;
   });
@@ -553,16 +742,28 @@ function caminho(remId, guiaId, fileName){
 
 async function abrirGuia(g){
   if(!g) return;
+  if(!g.meta) g.meta = {};
+  if(!Array.isArray(g.meta.carimbos)) g.meta.carimbos = [];
+  let mudou = false;
+  const paleta = CARIMBOS.map(c=>`<button class="cbtn" data-t="${esc(c.t)}" style="--ink:${c.c}">${esc(c.t)}</button>`).join('');
   const o = abrirModal(`
-    <h2>${esc(g.nome)}</h2>
-    <div class="bonecobig">${boneco(g.boneco_seed||1)}</div>
-    <div class="det" style="margin-top:14px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:52px;height:52px;border:3px solid var(--tinta);border-radius:10px;overflow:hidden;flex:0 0 auto;background:#fff">${boneco(g.boneco_seed||1)}</div>
+      <h2 style="font-size:24px;line-height:1;word-break:break-word">${esc(g.nome)}</h2>
+    </div>
+    <div class="det" style="margin-top:12px">
       <div class="linha"><b>Nº da guia</b><span>${esc(g.numero_guia)||'—'}</span></div>
       <div class="linha"><b>Código SIASS</b><span style="word-break:break-all">${esc(g.codigo_siass)||'—'}</span></div>
       <div class="linha"><b>Emissão</b><span>${dataBR(g.data_emissao)}</span></div>
       <div class="linha"><b>Arquivo</b><span>${g.arquivo_path?'📎 guardado':'— nenhum'}</span></div>
     </div>
-    <div class="acoes">
+
+    <label style="font-weight:800;display:block;margin-top:16px">Documento — carimbe aqui</label>
+    <div class="paper" id="paper"></div>
+    <div class="paleta">${paleta}</div>
+    <button id="c-desfazer" class="btn branco" style="margin-top:8px;padding:6px 12px;font-size:13px">↩ Desfazer último carimbo</button>
+
+    <div class="acoes" style="margin-top:16px">
       ${g.arquivo_path?`<button class="btn azul" id="g-abrir">Abrir arquivo</button>`:''}
       <button class="btn branco" id="g-troca">${g.arquivo_path?'Trocar arquivo':'Subir arquivo'}</button>
     </div>
@@ -572,7 +773,59 @@ async function abrirGuia(g){
     </div>
     <input id="g-troca-file" type="file" class="hide" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html">
     <div id="gd-erro" class="erro hide"></div>`);
-  o.querySelector('[data-x]').onclick = fecharModal;
+
+  function fechar(){ fecharModal(); if(mudou) recarregar(); }
+  o.querySelector('[data-x]').onclick = fechar;
+  o.addEventListener('click', e=>{ if(e.target===o && mudou) recarregar(); });
+
+  const paper = o.querySelector('#paper');
+  function pintarPapel(){
+    if(!g.meta.carimbos.length){ paper.innerHTML = `<div class="vazp">sem carimbos ainda</div>`; return; }
+    paper.innerHTML = g.meta.carimbos.map(c=>
+      `<div class="carimbo" style="--ink:${corCarimbo(c.t)};--r:${c.r||0}deg;left:${c.x||50}%;top:${c.y||50}%">
+         <span class="lb">${esc(c.t)}</span><span class="dt">${esc(dataHora(c.ts))}</span>
+       </div>`).join('');
+  }
+  pintarPapel();
+
+  async function salvarCarimbos(){
+    mudou = true;
+    const { error } = await sb.from('guias').update({ meta: g.meta }).eq('id', g.id);
+    if(error) toast('Erro ao salvar carimbo: '+error.message,'bad');
+  }
+
+  // carimbar (estilo "bate no papel"): escolhe o tipo, o carimbo desce e marca com data/hora
+  o.querySelectorAll('.cbtn').forEach(btn => btn.onclick = ()=>{
+    const t = btn.dataset.t, ink = corCarimbo(t);
+    const c = { t, ts:new Date().toISOString(),
+      x: 18 + Math.floor(Math.random()*58),
+      y: 18 + Math.floor(Math.random()*56),
+      r: Math.floor(Math.random()*29) - 14 };
+    const st = document.createElement('div');
+    st.className = 'stamper desce'; st.style.setProperty('--ink', ink);
+    st.innerHTML = `<div class="cabo"></div><div class="face">${esc(t)}</div>`;
+    paper.appendChild(st);
+    paper.classList.remove('shake'); void paper.offsetWidth; paper.classList.add('shake');
+    setTimeout(()=>{
+      st.remove();
+      if(paper.querySelector('.vazp')) paper.innerHTML = '';
+      g.meta.carimbos.push(c);
+      const el = document.createElement('div');
+      el.className = 'carimbo novo';
+      el.style.cssText = `--ink:${ink};--r:${c.r}deg;left:${c.x}%;top:${c.y}%`;
+      el.innerHTML = `<span class="lb">${esc(t)}</span><span class="dt">${esc(dataHora(c.ts))}</span>`;
+      paper.appendChild(el);
+      salvarCarimbos();
+    }, 300);
+  });
+
+  o.querySelector('#c-desfazer').onclick = async ()=>{
+    if(!g.meta.carimbos.length){ toast('Nenhum carimbo pra desfazer.'); return; }
+    g.meta.carimbos.pop();
+    pintarPapel();
+    await salvarCarimbos();
+    toast('Último carimbo removido.','ok');
+  };
 
   if(g.arquivo_path){
     o.querySelector('#g-abrir').onclick = async ()=>{
@@ -607,9 +860,10 @@ async function abrirGuia(g){
 }
 
 function recarregar(){
+  if($('#busca').value.trim()) return onBusca();
   if(remessaAtual) renderGuias(remessaAtual);
-  else if($('#busca').value.trim()) onBusca();
-  else renderRemessas();
+  else if(armarioAtual) renderRemessas(armarioAtual);
+  else renderArmarios();
 }
 
 /* ===================================================================
@@ -617,14 +871,24 @@ function recarregar(){
    =================================================================== */
 async function onBusca(){
   const q = $('#busca').value.trim();
-  if(!q){ remessaAtual ? renderGuias(remessaAtual) : renderRemessas(); return; }
-  let query = sb.from('guias').select('*, remessas(nome)').eq('arquivada',false)
+  if(!q){ remessaAtual ? renderGuias(remessaAtual) : (armarioAtual ? renderRemessas(armarioAtual) : renderArmarios()); return; }
+  let query = sb.from('guias').select('*, remessas(nome, armarios(nome))').eq('arquivada',false)
     .or(`nome.ilike.%${q}%,numero_guia.ilike.%${q}%,codigo_siass.ilike.%${q}%`)
     .order('criado_em',{ascending:false}).limit(60);
-  if(remessaAtual) query = query.eq('remessa_id', remessaAtual.id);
+  if(remessaAtual){
+    query = query.eq('remessa_id', remessaAtual.id);
+  } else if(armarioAtual){
+    const { data:rs } = await sb.from('remessas').select('id').eq('armario_id', armarioAtual.id);
+    const ids = (rs||[]).map(r=>r.id);
+    if(!ids.length){ pintarGuias([], { buscaVazia:true }); return; }
+    query = query.in('remessa_id', ids);
+  }
   const { data, error } = await query;
   if(error){ toast('Erro na busca: '+error.message,'bad'); return; }
-  (data||[]).forEach(g=> g.__remnome = g.remessas?.nome );
+  (data||[]).forEach(g=>{
+    const rn = g.remessas?.nome, an = g.remessas?.armarios?.nome;
+    g.__remnome = an ? `${an} › ${rn}` : rn;
+  });
   pintarGuias(data||[], { buscaVazia:true });
 }
 
@@ -632,6 +896,8 @@ async function onBusca(){
    START — recupera sessão salva
    =================================================================== */
 (async ()=>{
+  // Se veio de um link de recuperação de senha, deixa o onAuthStateChange abrir a tela certa
+  if((window.location.hash||'').includes('type=recovery')) return;
   const { data:{ session } } = await sb.auth.getSession();
   if(session && session.user){ USER = session.user; entrarNoApp(); }
 })();
