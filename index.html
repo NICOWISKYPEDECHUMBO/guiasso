@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>ARQUIVO DE GUIAS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:ital,wght@0,400;0,700;0,800;1,700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tinta:#1a1714;        /* preto contorno   */
+    --verde:#bcd0b5;        /* fundo quadrinho  */
+    --verde2:#a9c2a1;
+    --creme:#f6f1e3;        /* papel            */
+    --amarelo:#e9b24a;      /* destaque         */
+    --amarelo2:#f0c56d;
+    --vermelho:#d9594a;
+    --azul:#4a90d9;
+    --sombra:6px 6px 0 var(--tinta);
+    --sombra-p:3px 3px 0 var(--tinta);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Nunito',system-ui,sans-serif;
+    color:var(--tinta);
+    background:var(--verde);
+    background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.04) 0 1px,transparent 1px 46px);
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+  h1,h2,.banger{font-family:'Bangers',cursive;letter-spacing:1px;font-weight:400}
+  .mao{font-family:'Patrick Hand',cursive}
+  button{font-family:inherit;cursor:pointer}
+  .hide{display:none!important}
+
+  /* ---------- botões estilo HQ ---------- */
+  .btn{
+    border:3px solid var(--tinta);background:var(--amarelo);color:var(--tinta);
+    font-weight:800;font-size:15px;padding:10px 16px;border-radius:12px;
+    box-shadow:var(--sombra-p);transition:transform .05s, box-shadow .05s;
+    display:inline-flex;align-items:center;gap:8px;line-height:1;
+  }
+  .btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--tinta)}
+  .btn.azul{background:var(--azul);color:#fff}
+  .btn.verm{background:var(--vermelho);color:#fff}
+  .btn.branco{background:var(--creme)}
+  .btn.grande{font-size:18px;padding:14px 22px}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  /* ---------- painéis ---------- */
+  .painel{background:var(--creme);border:3px solid var(--tinta);border-radius:16px;box-shadow:var(--sombra)}
+
+  /* ---------- topo ---------- */
+  header{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:12px 16px;background:var(--amarelo);
+    border-bottom:4px solid var(--tinta);
+  }
+  header .logo{font-size:30px;line-height:.9}
+  header .logo small{display:block;font-family:'Patrick Hand',cursive;font-size:13px;letter-spacing:0}
+  header .quem{margin-left:auto;font-weight:700;font-size:13px;display:flex;align-items:center;gap:10px}
+  header .quem .email{max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+
+  /* ---------- migalha / barra ---------- */
+  .barra{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .migalha{font-weight:800;font-size:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .migalha a{color:var(--tinta);cursor:pointer;text-decoration:underline dotted}
+  .busca{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;
+    background:var(--creme);border:3px solid var(--tinta);border-radius:12px;padding:8px 12px;box-shadow:var(--sombra-p)}
+  .busca input{border:0;background:transparent;outline:0;font-family:inherit;font-size:15px;font-weight:700;flex:1;color:var(--tinta)}
+
+  /* ---------- grades ---------- */
+  .grade{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+
+  /* armário = remessa */
+  .armario{background:var(--creme);border:3px solid var(--tinta);border-radius:14px;box-shadow:var(--sombra);
+    padding:14px;display:flex;flex-direction:column;gap:10px;cursor:pointer;position:relative;transition:transform .06s}
+  .armario:active{transform:translate(2px,2px)}
+  .armario .capa{height:70px;border:3px solid var(--tinta);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:34px}
+  .armario .nome{font-family:'Bangers',cursive;font-size:22px;line-height:1;word-break:break-word}
+  .armario .qtd{font-family:'Patrick Hand',cursive;font-size:14px;opacity:.8}
+  .armario .lixo{position:absolute;top:8px;right:8px;background:var(--creme);border:2px solid var(--tinta);border-radius:8px;
+    width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:var(--sombra-p)}
+
+  /* pasta = guia */
+  .pasta{cursor:pointer;position:relative;transition:transform .06s}
+  .pasta:active{transform:translate(2px,2px)}
+  .pasta .aba{height:14px;width:56%;background:var(--amarelo);border:3px solid var(--tinta);border-bottom:0;
+    border-radius:10px 10px 0 0;margin-left:8px;position:relative;top:3px}
+  .pasta .corpo{background:var(--creme);border:3px solid var(--tinta);border-radius:6px 12px 12px 12px;box-shadow:var(--sombra);
+    padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .pasta .boneco{width:100%;aspect-ratio:1;border:3px solid var(--tinta);border-radius:10px;overflow:hidden;background:#fff}
+  .pasta .boneco svg{display:block;width:100%;height:100%}
+  .pasta .nome{font-weight:800;font-size:14px;text-align:center;line-height:1.1;word-break:break-word}
+  .pasta .tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .tag{font-family:'Patrick Hand',cursive;font-size:12px;background:var(--amarelo2);border:2px solid var(--tinta);
+    border-radius:20px;padding:1px 8px}
+  .tag.clip::before{content:"📎 "}
+  .pasta .remlbl{font-family:'Patrick Hand',cursive;font-size:12px;opacity:.75}
+
+  /* card "adicionar" */
+  .add{border:3px dashed var(--tinta);border-radius:14px;background:transparent;color:var(--tinta);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;min-height:120px;
+    font-family:'Bangers',cursive;font-size:20px}
+  .add span{font-size:40px;line-height:.7}
+  .add:active{transform:translate(2px,2px)}
+
+  /* vazio */
+  .vazio{grid-column:1/-1;text-align:center;padding:30px 16px;font-family:'Patrick Hand',cursive;font-size:18px;opacity:.85}
+  .vazio .balao{display:inline-block;background:var(--creme);border:3px solid var(--tinta);border-radius:16px;
+    padding:16px 22px;box-shadow:var(--sombra);position:relative}
+
+  /* ---------- modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(26,23,20,.55);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal{width:100%;max-width:460px;max-height:90vh;overflow:auto;background:var(--creme);border:4px solid var(--tinta);
+    border-radius:18px;box-shadow:8px 8px 0 var(--tinta);padding:20px}
+  .modal h2{font-size:30px;margin-bottom:6px}
+  .modal .campo{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+  .modal label{font-weight:800;font-size:14px}
+  .modal input[type=text],.modal input[type=email],.modal input[type=password],.modal input[type=date],.modal input[type=file]{
+    font-family:inherit;font-size:15px;font-weight:700;color:var(--tinta);
+    border:3px solid var(--tinta);border-radius:10px;padding:10px 12px;background:#fff;width:100%}
+  .modal input[type=file]{padding:8px;background:#fff}
+  .modal .acoes{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .modal .acoes .btn{flex:1;justify-content:center}
+  .cores{display:flex;gap:8px;flex-wrap:wrap}
+  .cores .c{width:34px;height:34px;border:3px solid var(--tinta);border-radius:8px;box-shadow:var(--sombra-p)}
+  .cores .c[aria-checked=true]{outline:3px solid var(--tinta);outline-offset:2px}
+  .aviso{font-family:'Patrick Hand',cursive;font-size:14px;background:var(--amarelo2);border:2px solid var(--tinta);
+    border-radius:10px;padding:8px 12px;margin-top:12px}
+  .erro{color:#fff;background:var(--vermelho);border:2px solid var(--tinta);border-radius:10px;padding:8px 12px;
+    font-weight:700;font-size:14px;margin-top:12px}
+
+  /* detalhe da guia */
+  .det{display:flex;flex-direction:column;gap:6px;font-weight:700}
+  .det .linha{display:flex;gap:8px}
+  .det .linha b{min-width:96px}
+  .det .bonecobig{width:120px;aspect-ratio:1;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff;margin:0 auto}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{background:var(--tinta);color:#fff;font-weight:800;border-radius:12px;padding:10px 16px;box-shadow:var(--sombra-p);
+    border:3px solid var(--tinta);animation:pop .2s}
+  .toast.ok{background:#2f7d43}.toast.bad{background:var(--vermelho)}
+  @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+  /* login */
+  #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  #auth .card{width:100%;max-width:400px;text-align:center;padding:26px}
+  #auth .selo{font-size:56px;line-height:.8}
+  #auth h1{font-size:44px;margin-top:6px}
+  #auth p.sub{font-family:'Patrick Hand',cursive;font-size:16px;margin-bottom:6px}
+  .spin{display:inline-block;width:16px;height:16px;border:3px solid #fff;border-top-color:transparent;border-radius:50%;animation:g .7s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ========================= LOGIN ========================= -->
+<div id="auth">
+  <div class="card painel">
+    <div class="selo">🗄️</div>
+    <h1>ARQUIVO DE GUIAS</h1>
+    <div class="campo" style="text-align:left;margin-top:16px">
+      <label for="a-email">E-mail</label>
+      <input id="a-email" type="email" autocomplete="email" placeholder="voce@email.com">
+    </div>
+    <div class="campo" style="text-align:left">
+      <label for="a-pass">Senha</label>
+      <input id="a-pass" type="password" autocomplete="current-password" placeholder="sua senha">
+    </div>
+    <div id="a-erro" class="erro hide"></div>
+    <div id="a-aviso" class="aviso hide"></div>
+    <div class="acoes" style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      <button id="a-entrar" class="btn grande azul" style="flex:1;justify-content:center">Entrar</button>
+      <button id="a-criar" class="btn grande branco" style="flex:1;justify-content:center">Criar conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= APP ========================= -->
+<div id="app" class="hide">
+  <header>
+    <div class="logo banger">ARQUIVO DE GUIAS</div>
+    <div class="quem">
+      <span class="email" id="u-email"></span>
+      <button id="u-sair" class="btn branco" style="padding:6px 12px">Sair</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="barra">
+      <div class="migalha" id="migalha"></div>
+      <div class="busca" id="caixa-busca">
+        <span>🔎</span>
+        <input id="busca" placeholder="Buscar guia por nome ou nº…">
+      </div>
+    </div>
+    <div id="conteudo" class="grade"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="modais"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ===== Conexão com o SEU Supabase ===== */
+const SUPABASE_URL = 'https://fvwpgftwoqrxwcoxgjje.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_CAvjAOYF8KONEXQfkb7pRA_0SD0GHxO';
+const BUCKET = 'guias';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ===== atalhos ===== */
+const $ = s => document.querySelector(s);
+const elAuth = $('#auth'), elApp = $('#app'), elConteudo = $('#conteudo'), elMigalha = $('#migalha');
+let USER = null;
+let remessaAtual = null;        // objeto remessa aberta (ou null = home)
+
+/* ===== toast ===== */
+function toast(msg, tipo=''){
+  const t = document.createElement('div');
+  t.className = 'toast ' + tipo;
+  t.textContent = msg;
+  $('#toast').appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+/* ===== escape ===== */
+const esc = s => (s??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dataBR = s => { if(!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+
+/* ===================================================================
+   BONECO ALEATÓRIO (SVG desenhado a partir do "seed" salvo na guia)
+   =================================================================== */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function boneco(seed){
+  const r = mulberry32(seed>>>0);
+  const pick = a => a[Math.floor(r()*a.length)];
+  const skin  = pick(['#ffdbac','#f1c27d','#e0ac69','#c68642','#8d5524']);
+  const hair  = pick(['#1a1714','#3b2417','#6b3e26','#b55239','#d9a441','#7a7a7a','#efe6d2']);
+  const shirt = pick(['#e9b24a','#4a90d9','#59b36a','#d9594a','#8e5bd9','#d97fb0','#3ec6c6','#f0714f']);
+  const bg    = pick(['#bcd0b5','#cbd8c2','#d8cf9f','#c6d3dd','#e6cfc6','#d9cbe6']);
+  const est   = Math.floor(r()*5);       // estilo de cabelo
+  const oculos= r() < 0.35;
+  const T = 'stroke="#1a1714" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+  let cabelo = '';
+  if(est===0) cabelo = `<path d="M29,47 Q29,23 50,23 Q71,23 71,47 Q64,35 50,35 Q36,35 29,47 Z" fill="${hair}" ${T}/>`;
+  else if(est===1) cabelo = `<path d="M30,40 Q50,20 70,40 Q60,31 50,31 Q40,31 30,40 Z" fill="${hair}" ${T}/>`;
+  else if(est===2) cabelo = `<path d="M30,42 L36,26 L42,38 L50,24 L58,38 L64,26 L70,42 Q50,34 30,42 Z" fill="${hair}" ${T}/>`;
+  else if(est===3) cabelo = ``; // careca
+  else cabelo = `<g fill="${hair}" ${T}><circle cx="34" cy="34" r="9"/><circle cx="50" cy="27" r="10"/><circle cx="66" cy="34" r="9"/></g>`;
+  const olhos = oculos
+    ? `<g ${T} fill="#fff"><circle cx="42" cy="47" r="6"/><circle cx="58" cy="47" r="6"/></g>
+       <line x1="48" y1="47" x2="52" y2="47" ${T}/>
+       <circle cx="42" cy="47" r="2" fill="#1a1714"/><circle cx="58" cy="47" r="2" fill="#1a1714"/>`
+    : `<circle cx="42" cy="47" r="2.6" fill="#1a1714"/><circle cx="58" cy="47" r="2.6" fill="#1a1714"/>`;
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="${bg}"/>
+    <path d="M16,100 C16,80 30,72 50,72 C70,72 84,80 84,100 Z" fill="${shirt}" ${T}/>
+    <path d="M42,72 L50,80 L58,72" fill="none" ${T}/>
+    <circle cx="50" cy="48" r="21" fill="${skin}" ${T}/>
+    <circle cx="29" cy="50" r="4" fill="${skin}" ${T}/><circle cx="71" cy="50" r="4" fill="${skin}" ${T}/>
+    ${cabelo}
+    ${olhos}
+    <path d="M43,58 Q50,65 57,58" fill="none" ${T}/>
+  </svg>`;
+}
+
+/* ===================================================================
+   MODAIS  (confirmar / formulários)
+   =================================================================== */
+function fecharModal(){ $('#modais').innerHTML=''; }
+function abrirModal(html){
+  const o = document.createElement('div'); o.className='overlay';
+  o.innerHTML = `<div class="modal painel">${html}</div>`;
+  o.addEventListener('click', e=>{ if(e.target===o) fecharModal(); });
+  $('#modais').innerHTML=''; $('#modais').appendChild(o);
+  return o;
+}
+/* confirmação estilo próprio (nunca confirm() nativo) */
+function confirmar(titulo, msg, textoOk='Apagar'){
+  return new Promise(res=>{
+    const o = abrirModal(`
+      <h2>${esc(titulo)}</h2>
+      <p style="font-family:'Patrick Hand',cursive;font-size:16px;margin-top:6px">${esc(msg)}</p>
+      <div class="acoes">
+        <button class="btn branco" data-x>Cancelar</button>
+        <button class="btn verm" data-ok>${esc(textoOk)}</button>
+      </div>`);
+    o.querySelector('[data-x]').onclick = ()=>{ fecharModal(); res(false); };
+    o.querySelector('[data-ok]').onclick = ()=>{ fecharModal(); res(true); };
+  });
+}
+
+/* ===================================================================
+   AUTENTICAÇÃO
+   =================================================================== */
+function authErro(msg){ const e=$('#a-erro'); e.textContent=msg; e.classList.remove('hide'); $('#a-aviso').classList.add('hide'); }
+function authAviso(msg){ const e=$('#a-aviso'); e.textContent=msg; e.classList.remove('hide'); $('#a-erro').classList.add('hide'); }
+function limpaAuth(){ $('#a-erro').classList.add('hide'); $('#a-aviso').classList.add('hide'); }
+function traduzErro(m){
+  m = (m||'').toLowerCase();
+  if(m.includes('invalid login')) return 'E-mail ou senha errados.';
+  if(m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar (veja sua caixa de entrada).';
+  if(m.includes('already registered')) return 'Esse e-mail já tem conta. É só entrar.';
+  if(m.includes('password')&&m.includes('6')) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if(m.includes('rate')) return 'Muitas tentativas. Espera um minutinho.';
+  return m || 'Deu algo errado, tenta de novo.';
+}
+
+$('#a-entrar').onclick = async ()=>{
+  limpaAuth();
+  const email=$('#a-email').value.trim(), password=$('#a-pass').value;
+  if(!email||!password) return authErro('Preencha e-mail e senha.');
+  const b=$('#a-entrar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  b.disabled=false; b.textContent='Entrar';
+  if(error) return authErro(traduzErro(error.message));
+  // onAuthStateChange cuida do resto
+};
+$('#a-criar').onclick = async ()=>{
+  limpaAuth();
+  const email=$('#a-email').value.trim(), password=$('#a-pass').value;
+  if(!email||!password) return authErro('Preencha e-mail e senha.');
+  if(password.length<6) return authErro('A senha precisa ter pelo menos 6 caracteres.');
+  const b=$('#a-criar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+  const { data, error } = await sb.auth.signUp({ email, password });
+  b.disabled=false; b.textContent='Criar conta';
+  if(error) return authErro(traduzErro(error.message));
+  if(data.user && !data.session){
+    authAviso('Conta criada! Enviamos um e-mail de confirmação — clique no link e depois toque em Entrar.');
+  } // se já tiver sessão, o onAuthStateChange entra direto
+};
+$('#u-sair').onclick = async ()=>{ await sb.auth.signOut(); };
+
+sb.auth.onAuthStateChange((_ev, session)=>{
+  if(session && session.user){ USER = session.user; entrarNoApp(); }
+  else { USER = null; elApp.classList.add('hide'); elAuth.classList.remove('hide'); }
+});
+
+async function entrarNoApp(){
+  $('#u-email').textContent = USER.email || '';
+  elAuth.classList.add('hide'); elApp.classList.remove('hide');
+  remessaAtual = null;
+  await irHome();
+}
+
+/* ===================================================================
+   NAVEGAÇÃO
+   =================================================================== */
+$('#busca').addEventListener('input', debounce(onBusca, 300));
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+
+async function irHome(){
+  remessaAtual = null;
+  $('#busca').value=''; $('#busca').placeholder='Buscar guia por nome ou nº…';
+  elMigalha.innerHTML = `<span>📦 Remessas</span>`;
+  await renderRemessas();
+}
+async function abrirRemessa(rem){
+  remessaAtual = rem;
+  $('#busca').value=''; $('#busca').placeholder='Buscar guia nesta remessa…';
+  elMigalha.innerHTML = `<a id="volta">📦 Remessas</a> <span>›</span> <span>🗂️ ${esc(rem.nome)}</span>`;
+  $('#volta').onclick = irHome;
+  await renderGuias(rem);
+}
+
+/* ===================================================================
+   REMESSAS  (armários)
+   =================================================================== */
+async function renderRemessas(){
+  elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
+  const { data:rem, error } = await sb.from('remessas').select('*').eq('arquivada',false).order('criado_em',{ascending:false});
+  if(error){ toast('Erro ao carregar: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
+  // contagem de guias por remessa
+  const ids = rem.map(r=>r.id);
+  let cont = {};
+  if(ids.length){
+    const { data:gs } = await sb.from('guias').select('remessa_id').in('remessa_id',ids).eq('arquivada',false);
+    (gs||[]).forEach(g=> cont[g.remessa_id]=(cont[g.remessa_id]||0)+1);
+  }
+  let html = `<button class="add" id="add-rem"><span>＋</span>Nova remessa</button>`;
+  if(!rem.length){
+    html += `<div class="vazio"><div class="balao">Nenhuma remessa criada.<br>Toque em <b>＋ Nova remessa</b> para começar.</div></div>`;
+  }
+  rem.forEach(r=>{
+    const n = cont[r.id]||0;
+    html += `<div class="armario" data-id="${r.id}">
+      <button class="lixo" data-del="${r.id}" title="Apagar remessa">🗑️</button>
+      <div class="capa" style="background:${esc(r.cor||'#e9b24a')}">🗂️</div>
+      <div class="nome">${esc(r.nome)}</div>
+      <div class="qtd">${n} ${n===1?'guia':'guias'}</div>
+    </div>`;
+  });
+  elConteudo.innerHTML = html;
+  $('#add-rem').onclick = formRemessa;
+  elConteudo.querySelectorAll('.armario').forEach(c=>{
+    c.addEventListener('click', e=>{
+      if(e.target.closest('[data-del]')) return;
+      const r = rem.find(x=>x.id===c.dataset.id); abrirRemessa(r);
+    });
+  });
+  elConteudo.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = ()=> apagarRemessa(rem.find(x=>x.id===b.dataset.del));
+  });
+}
+
+function formRemessa(){
+  const cores=['#e9b24a','#4a90d9','#59b36a','#d9594a','#8e5bd9','#3ec6c6'];
+  const o = abrirModal(`
+    <h2>Nova remessa</h2>
+    <div class="campo"><label>Nome da remessa</label>
+      <input id="r-nome" type="text" maxlength="120" placeholder="Ex: Remessa Agosto/2026"></div>
+    <div class="campo"><label>Cor da capa</label>
+      <div class="cores" id="r-cores">${cores.map((c,i)=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${i===0}"></div>`).join('')}</div></div>
+    <div id="r-erro" class="erro hide"></div>
+    <div class="acoes">
+      <button class="btn branco" data-x>Cancelar</button>
+      <button class="btn azul" id="r-salvar">Criar remessa</button>
+    </div>`);
+  let cor = cores[0];
+  o.querySelectorAll('#r-cores .c').forEach(c=> c.onclick=()=>{
+    o.querySelectorAll('#r-cores .c').forEach(x=>x.setAttribute('aria-checked','false'));
+    c.setAttribute('aria-checked','true'); cor=c.dataset.cor;
+  });
+  o.querySelector('[data-x]').onclick = fecharModal;
+  o.querySelector('#r-nome').focus();
+  o.querySelector('#r-salvar').onclick = async ()=>{
+    const nome=o.querySelector('#r-nome').value.trim();
+    if(!nome){ o.querySelector('#r-erro').textContent='Dá um nome pra remessa.'; o.querySelector('#r-erro').classList.remove('hide'); return; }
+    const b=o.querySelector('#r-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    const { error } = await sb.from('remessas').insert({ nome, cor });
+    if(error){ b.disabled=false; b.textContent='Criar remessa'; o.querySelector('#r-erro').textContent=error.message; o.querySelector('#r-erro').classList.remove('hide'); return; }
+    fecharModal(); toast('Remessa criada!','ok'); renderRemessas();
+  };
+}
+
+async function apagarRemessa(rem){
+  if(!rem) return;
+  const ok = await confirmar('Apagar remessa?', `Isso apaga a remessa "${rem.nome}" e TODAS as guias e arquivos dentro dela. Não dá pra desfazer.`, 'Apagar tudo');
+  if(!ok) return;
+  // apaga arquivos do storage primeiro
+  const { data:gs } = await sb.from('guias').select('arquivo_path').eq('remessa_id',rem.id);
+  const paths = (gs||[]).map(g=>g.arquivo_path).filter(Boolean);
+  if(paths.length) await sb.storage.from(BUCKET).remove(paths);
+  const { error } = await sb.from('remessas').delete().eq('id',rem.id); // guias caem por cascade
+  if(error){ toast('Erro: '+error.message,'bad'); return; }
+  toast('Remessa apagada.','ok'); renderRemessas();
+}
+
+/* ===================================================================
+   GUIAS  (pastas)
+   =================================================================== */
+async function renderGuias(rem){
+  elConteudo.innerHTML = `<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
+  const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false).order('criado_em',{ascending:false});
+  if(error){ toast('Erro: '+error.message,'bad'); elConteudo.innerHTML=''; return; }
+  pintarGuias(guias, { addPara: rem });
+}
+
+function pintarGuias(guias, opts={}){
+  let html = '';
+  if(opts.addPara){
+    html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
+  }
+  if(!guias.length){
+    html += `<div class="vazio"><div class="balao">${opts.buscaVazia
+      ? 'Nenhum resultado.'
+      : 'Nenhuma guia nesta remessa.<br>Toque em <b>＋ Nova guia</b> para adicionar.'}</div></div>`;
+  }
+  guias.forEach(g=>{
+    html += `<div class="pasta" data-id="${g.id}">
+      <div class="aba"></div>
+      <div class="corpo">
+        <div class="boneco">${boneco(g.boneco_seed||1)}</div>
+        <div class="nome">${esc(g.nome)}</div>
+        ${g.__remnome ? `<div class="remlbl">📦 ${esc(g.__remnome)}</div>`:''}
+        <div class="tags">
+          ${g.numero_guia?`<span class="tag">nº ${esc(g.numero_guia)}</span>`:''}
+          ${g.arquivo_path?`<span class="tag clip">arquivo</span>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
+        </div>
+      </div>
+    </div>`;
+  });
+  elConteudo.innerHTML = html;
+  if(opts.addPara){ $('#add-guia').onclick = ()=> formGuia(opts.addPara); }
+  elConteudo.querySelectorAll('.pasta').forEach(c=>{
+    c.onclick = ()=> abrirGuia(guias.find(x=>x.id===c.dataset.id));
+  });
+}
+
+function formGuia(rem){
+  const o = abrirModal(`
+    <h2>Nova guia</h2>
+    <p style="font-size:14px;font-weight:700;opacity:.75">Remessa: <b>${esc(rem.nome)}</b></p>
+    <div class="campo"><label>Nome (do servidor / da guia)</label>
+      <input id="g-nome" type="text" maxlength="160" placeholder="Ex: MARCO AURELIO MONTEIRO DUTRA"></div>
+    <div class="campo"><label>Nº da guia <span style="font-weight:400">(opcional)</span></label>
+      <input id="g-num" type="text" placeholder="Ex: 2378111536"></div>
+    <div class="campo"><label>Código SIASS <span style="font-weight:400">(opcional)</span></label>
+      <input id="g-cod" type="text" placeholder="Ex: 0606.7304.15D7.3809.B372.D30E"></div>
+    <div class="campo"><label>Data de emissão <span style="font-weight:400">(opcional)</span></label>
+      <input id="g-data" type="date"></div>
+    <div class="campo"><label>Arquivo da guia <span style="font-weight:400">(PDF, imagem ou HTML)</span></label>
+      <input id="g-arq" type="file" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html"></div>
+    <div id="g-erro" class="erro hide"></div>
+    <div class="acoes">
+      <button class="btn branco" data-x>Cancelar</button>
+      <button class="btn azul" id="g-salvar">Guardar guia</button>
+    </div>`);
+  o.querySelector('[data-x]').onclick = fecharModal;
+  o.querySelector('#g-nome').focus();
+  o.querySelector('#g-salvar').onclick = async ()=>{
+    const erro = o.querySelector('#g-erro');
+    const nome = o.querySelector('#g-nome').value.trim();
+    if(!nome){ erro.textContent='O nome é obrigatório.'; erro.classList.remove('hide'); return; }
+    const file = o.querySelector('#g-arq').files[0] || null;
+    if(file && file.size > 20*1024*1024){ erro.textContent='Arquivo maior que 20 MB.'; erro.classList.remove('hide'); return; }
+    const b=o.querySelector('#g-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    const seed = (Math.random()*1000000)|0;
+    // 1) cria a guia
+    const { data:novo, error } = await sb.from('guias').insert({
+      remessa_id: rem.id, nome,
+      numero_guia: o.querySelector('#g-num').value.trim()||null,
+      codigo_siass: o.querySelector('#g-cod').value.trim()||null,
+      data_emissao: o.querySelector('#g-data').value||null,
+      boneco_seed: seed
+    }).select().single();
+    if(error){ b.disabled=false; b.textContent='Guardar guia'; erro.textContent=error.message; erro.classList.remove('hide'); return; }
+    // 2) se tem arquivo, sobe pro cofre privado e salva o caminho
+    if(file){
+      const path = caminho(rem.id, novo.id, file.name);
+      const up = await sb.storage.from(BUCKET).upload(path, file, { upsert:true, contentType:file.type||undefined });
+      if(up.error){ b.disabled=false; b.textContent='Guardar guia'; erro.textContent='Guia criada, mas o arquivo falhou: '+up.error.message; erro.classList.remove('hide'); return; }
+      await sb.from('guias').update({ arquivo_path: path }).eq('id', novo.id);
+    }
+    fecharModal(); toast('Guia guardada!','ok'); renderGuias(rem);
+  };
+}
+
+function caminho(remId, guiaId, fileName){
+  const limpo = (fileName||'arquivo').replace(/[^\w.\-]+/g,'_').slice(-80);
+  return `${USER.id}/${remId}/${guiaId}/${Date.now()}_${limpo}`;
+}
+
+async function abrirGuia(g){
+  if(!g) return;
+  const o = abrirModal(`
+    <h2>${esc(g.nome)}</h2>
+    <div class="bonecobig">${boneco(g.boneco_seed||1)}</div>
+    <div class="det" style="margin-top:14px">
+      <div class="linha"><b>Nº da guia</b><span>${esc(g.numero_guia)||'—'}</span></div>
+      <div class="linha"><b>Código SIASS</b><span style="word-break:break-all">${esc(g.codigo_siass)||'—'}</span></div>
+      <div class="linha"><b>Emissão</b><span>${dataBR(g.data_emissao)}</span></div>
+      <div class="linha"><b>Arquivo</b><span>${g.arquivo_path?'📎 guardado':'— nenhum'}</span></div>
+    </div>
+    <div class="acoes">
+      ${g.arquivo_path?`<button class="btn azul" id="g-abrir">Abrir arquivo</button>`:''}
+      <button class="btn branco" id="g-troca">${g.arquivo_path?'Trocar arquivo':'Subir arquivo'}</button>
+    </div>
+    <div class="acoes" style="margin-top:10px">
+      <button class="btn verm" id="g-del">Apagar guia</button>
+      <button class="btn branco" data-x style="flex:0 0 auto">Fechar</button>
+    </div>
+    <input id="g-troca-file" type="file" class="hide" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html">
+    <div id="gd-erro" class="erro hide"></div>`);
+  o.querySelector('[data-x]').onclick = fecharModal;
+
+  if(g.arquivo_path){
+    o.querySelector('#g-abrir').onclick = async ()=>{
+      const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(g.arquivo_path, 120);
+      if(error){ toast('Não abriu: '+error.message,'bad'); return; }
+      window.open(data.signedUrl, '_blank');
+    };
+  }
+  const fileInput = o.querySelector('#g-troca-file');
+  o.querySelector('#g-troca').onclick = ()=> fileInput.click();
+  fileInput.onchange = async ()=>{
+    const file = fileInput.files[0]; if(!file) return;
+    const gde = o.querySelector('#gd-erro');
+    if(file.size > 20*1024*1024){ gde.textContent='Arquivo maior que 20 MB.'; gde.classList.remove('hide'); return; }
+    const btn=o.querySelector('#g-troca'); btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+    const path = caminho(g.remessa_id, g.id, file.name);
+    const up = await sb.storage.from(BUCKET).upload(path, file, { upsert:true, contentType:file.type||undefined });
+    if(up.error){ btn.disabled=false; btn.textContent='Trocar arquivo'; gde.textContent=up.error.message; gde.classList.remove('hide'); return; }
+    if(g.arquivo_path && g.arquivo_path!==path) await sb.storage.from(BUCKET).remove([g.arquivo_path]);
+    await sb.from('guias').update({ arquivo_path: path }).eq('id', g.id);
+    g.arquivo_path = path;
+    fecharModal(); toast('Arquivo salvo!','ok'); recarregar();
+  };
+  o.querySelector('#g-del').onclick = async ()=>{
+    const ok = await confirmar('Apagar guia?', `Isso apaga a guia "${g.nome}" e o arquivo dela. Não dá pra desfazer.`, 'Apagar');
+    if(!ok) return;
+    if(g.arquivo_path) await sb.storage.from(BUCKET).remove([g.arquivo_path]);
+    const { error } = await sb.from('guias').delete().eq('id', g.id);
+    if(error){ toast('Erro: '+error.message,'bad'); return; }
+    fecharModal(); toast('Guia apagada.','ok'); recarregar();
+  };
+}
+
+function recarregar(){
+  if(remessaAtual) renderGuias(remessaAtual);
+  else if($('#busca').value.trim()) onBusca();
+  else renderRemessas();
+}
+
+/* ===================================================================
+   BUSCA
+   =================================================================== */
+async function onBusca(){
+  const q = $('#busca').value.trim();
+  if(!q){ remessaAtual ? renderGuias(remessaAtual) : renderRemessas(); return; }
+  let query = sb.from('guias').select('*, remessas(nome)').eq('arquivada',false)
+    .or(`nome.ilike.%${q}%,numero_guia.ilike.%${q}%,codigo_siass.ilike.%${q}%`)
+    .order('criado_em',{ascending:false}).limit(60);
+  if(remessaAtual) query = query.eq('remessa_id', remessaAtual.id);
+  const { data, error } = await query;
+  if(error){ toast('Erro na busca: '+error.message,'bad'); return; }
+  (data||[]).forEach(g=> g.__remnome = g.remessas?.nome );
+  pintarGuias(data||[], { buscaVazia:true });
+}
+
+/* ===================================================================
+   START — recupera sessão salva
+   =================================================================== */
+(async ()=>{
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session && session.user){ USER = session.user; entrarNoApp(); }
+})();
+</script>
+</body>
+</html>
