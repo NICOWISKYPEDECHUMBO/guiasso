@@ -163,6 +163,10 @@
   .cab .front .knob{width:46px;height:10px;border-radius:6px;background:rgba(0,0,0,.4);border:2px solid rgba(0,0,0,.5)}
   .cab .del{position:absolute;top:-10px;right:-10px;width:26px;height:26px;border-radius:50%;background:#cf5c4b;color:#fff;
     border:3px solid var(--tinta);font-weight:800;font-size:15px;cursor:pointer;z-index:6;line-height:1}
+  .cab .edit{position:absolute;top:-10px;left:-10px;width:26px;height:26px;border-radius:50%;background:#f0c56d;color:var(--tinta);
+    border:3px solid var(--tinta);font-weight:800;font-size:13px;cursor:pointer;z-index:6;line-height:1}
+  .drawer .edit{width:26px;height:26px;border-radius:50%;background:#f0c56d;color:var(--tinta);border:2.5px solid var(--tinta);
+    font-weight:800;font-size:13px;cursor:pointer;flex:none;line-height:1}
   .cab .meta{text-align:center;font-size:12px;font-weight:800;color:#3a362f;margin-top:7px;font-family:'Patrick Hand',cursive}
   .add-cab{min-height:184px;border:3px dashed var(--tinta);border-radius:8px;background:rgba(255,255,255,.28);
     font-family:'Patrick Hand',cursive;font-size:20px;color:var(--tinta);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -539,6 +543,7 @@ async function renderArmarios(){
   arms.forEach(a=>{
     const n = cont[a.id]||0;
     html += `<div class="cab" data-id="${a.id}" style="--tint:${esc(a.cor||'#8e5bd9')}">
+      <button class="edit" data-edit="${a.id}" title="Editar armário">✎</button>
       <button class="del" data-del="${a.id}" title="Apagar armário">×</button>
       <div class="plate">${esc(a.nome)}</div>
       <div class="body">
@@ -551,32 +556,36 @@ async function renderArmarios(){
   });
   html += `<button class="add-cab" id="add-arm">＋ Novo armário</button>`;
   elConteudo.innerHTML = html;
-  $('#add-arm').onclick = formArmario;
+  $('#add-arm').onclick = ()=> formArmario();
   elConteudo.querySelectorAll('.cab').forEach(c=>{
     c.addEventListener('click', e=>{
-      if(e.target.closest('[data-del]')) return;
+      if(e.target.closest('[data-del]') || e.target.closest('[data-edit]')) return;
       abrirArmario(arms.find(x=>x.id===c.dataset.id));
     });
+  });
+  elConteudo.querySelectorAll('[data-edit]').forEach(b=>{
+    b.onclick = ()=> formArmario(arms.find(x=>x.id===b.dataset.edit));
   });
   elConteudo.querySelectorAll('[data-del]').forEach(b=>{
     b.onclick = ()=> apagarArmario(arms.find(x=>x.id===b.dataset.del));
   });
 }
 
-function formArmario(){
+function formArmario(existente=null){
   const cores=['#8e5bd9','#4a90d9','#59b36a','#d9594a','#e9b24a','#3ec6c6'];
+  const ed = !!existente;
+  let cor = ed ? (existente.cor||cores[0]) : cores[0];
   const o = abrirModal(`
-    <h2>Novo armário</h2>
+    <h2>${ed?'Editar armário':'Novo armário'}</h2>
     <div class="campo"><label>Nome do armário</label>
-      <input id="a-nome" type="text" maxlength="120" placeholder="Ex: Armário 2026"></div>
+      <input id="a-nome" type="text" maxlength="120" placeholder="Ex: Armário 2026" value="${ed?esc(existente.nome):''}"></div>
     <div class="campo"><label>Cor</label>
-      <div class="cores" id="a-cores">${cores.map((c,i)=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${i===0}"></div>`).join('')}</div></div>
+      <div class="cores" id="a-cores">${cores.map(c=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${c===cor}"></div>`).join('')}</div></div>
     <div id="a-err2" class="erro hide"></div>
     <div class="acoes">
       <button class="btn branco" data-x>Cancelar</button>
-      <button class="btn azul" id="a-salvar">Criar armário</button>
+      <button class="btn azul" id="a-salvar">${ed?'Salvar':'Criar armário'}</button>
     </div>`);
-  let cor = cores[0];
   o.querySelectorAll('#a-cores .c').forEach(c=> c.onclick=()=>{
     o.querySelectorAll('#a-cores .c').forEach(x=>x.setAttribute('aria-checked','false'));
     c.setAttribute('aria-checked','true'); cor=c.dataset.cor;
@@ -587,9 +596,11 @@ function formArmario(){
     const nome=o.querySelector('#a-nome').value.trim();
     if(!nome){ o.querySelector('#a-err2').textContent='Dá um nome pro armário.'; o.querySelector('#a-err2').classList.remove('hide'); return; }
     const b=o.querySelector('#a-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
-    const { error } = await sb.from('armarios').insert({ nome, cor });
-    if(error){ b.disabled=false; b.textContent='Criar armário'; o.querySelector('#a-err2').textContent=error.message; o.querySelector('#a-err2').classList.remove('hide'); return; }
-    fecharModal(); toast('Armário criado!','ok'); renderArmarios();
+    const { error } = ed
+      ? await sb.from('armarios').update({ nome, cor }).eq('id', existente.id)
+      : await sb.from('armarios').insert({ nome, cor });
+    if(error){ b.disabled=false; b.textContent=ed?'Salvar':'Criar armário'; o.querySelector('#a-err2').textContent=error.message; o.querySelector('#a-err2').classList.remove('hide'); return; }
+    fecharModal(); toast(ed?'Armário atualizado!':'Armário criado!','ok'); renderArmarios();
   };
 }
 
@@ -633,6 +644,7 @@ async function renderRemessas(arm){
       <div class="knob"></div>
       <div class="tag">${esc(r.nome)}</div>
       <div class="dmeta">${n} ${n===1?'guia':'guias'}</div>
+      <button class="edit" data-edit="${r.id}" title="Editar remessa">✎</button>
       <button class="del" data-del="${r.id}" title="Apagar remessa">×</button>
     </div>`;
   });
@@ -646,30 +658,34 @@ async function renderRemessas(arm){
   $('#add-rem').onclick = ()=> formRemessa(arm);
   elConteudo.querySelectorAll('.drawer').forEach(c=>{
     c.addEventListener('click', e=>{
-      if(e.target.closest('[data-del]')) return;
+      if(e.target.closest('[data-del]') || e.target.closest('[data-edit]')) return;
       abrirRemessa(rem.find(x=>x.id===c.dataset.id));
     });
+  });
+  elConteudo.querySelectorAll('[data-edit]').forEach(b=>{
+    b.onclick = ()=> formRemessa(arm, rem.find(x=>x.id===b.dataset.edit));
   });
   elConteudo.querySelectorAll('[data-del]').forEach(b=>{
     b.onclick = ()=> apagarRemessa(rem.find(x=>x.id===b.dataset.del));
   });
 }
 
-function formRemessa(arm){
+function formRemessa(arm, existente=null){
   const cores=['#e9b24a','#4a90d9','#59b36a','#d9594a','#8e5bd9','#3ec6c6'];
+  const ed = !!existente;
+  let cor = ed ? (existente.cor||cores[0]) : cores[0];
   const o = abrirModal(`
-    <h2>Nova remessa</h2>
+    <h2>${ed?'Editar remessa':'Nova remessa'}</h2>
     <p style="font-size:14px;font-weight:700;opacity:.75">Armário: <b>${esc(arm.nome)}</b></p>
     <div class="campo"><label>Nome da remessa</label>
-      <input id="r-nome" type="text" maxlength="120" placeholder="Ex: Remessa Agosto/2026"></div>
+      <input id="r-nome" type="text" maxlength="120" placeholder="Ex: Remessa Agosto/2026" value="${ed?esc(existente.nome):''}"></div>
     <div class="campo"><label>Cor da capa</label>
-      <div class="cores" id="r-cores">${cores.map((c,i)=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${i===0}"></div>`).join('')}</div></div>
+      <div class="cores" id="r-cores">${cores.map(c=>`<div class="c" data-cor="${c}" style="background:${c}" aria-checked="${c===cor}"></div>`).join('')}</div></div>
     <div id="r-erro" class="erro hide"></div>
     <div class="acoes">
       <button class="btn branco" data-x>Cancelar</button>
-      <button class="btn azul" id="r-salvar">Criar remessa</button>
+      <button class="btn azul" id="r-salvar">${ed?'Salvar':'Criar remessa'}</button>
     </div>`);
-  let cor = cores[0];
   o.querySelectorAll('#r-cores .c').forEach(c=> c.onclick=()=>{
     o.querySelectorAll('#r-cores .c').forEach(x=>x.setAttribute('aria-checked','false'));
     c.setAttribute('aria-checked','true'); cor=c.dataset.cor;
@@ -680,9 +696,11 @@ function formRemessa(arm){
     const nome=o.querySelector('#r-nome').value.trim();
     if(!nome){ o.querySelector('#r-erro').textContent='Dá um nome pra remessa.'; o.querySelector('#r-erro').classList.remove('hide'); return; }
     const b=o.querySelector('#r-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
-    const { error } = await sb.from('remessas').insert({ nome, cor, armario_id: arm.id });
-    if(error){ b.disabled=false; b.textContent='Criar remessa'; o.querySelector('#r-erro').textContent=error.message; o.querySelector('#r-erro').classList.remove('hide'); return; }
-    fecharModal(); toast('Remessa criada!','ok'); renderRemessas(arm);
+    const { error } = ed
+      ? await sb.from('remessas').update({ nome, cor }).eq('id', existente.id)
+      : await sb.from('remessas').insert({ nome, cor, armario_id: arm.id });
+    if(error){ b.disabled=false; b.textContent=ed?'Salvar':'Criar remessa'; o.querySelector('#r-erro').textContent=error.message; o.querySelector('#r-erro').classList.remove('hide'); return; }
+    fecharModal(); toast(ed?'Remessa atualizada!':'Remessa criada!','ok'); renderRemessas(arm);
   };
 }
 
@@ -793,6 +811,44 @@ function formGuia(rem){
   };
 }
 
+function editarGuia(g){
+  const o = abrirModal(`
+    <h2>Editar guia</h2>
+    <div class="campo"><label>Nome (do servidor / da guia)</label>
+      <input id="e-nome" type="text" maxlength="160" value="${esc(g.nome)}"></div>
+    <div class="campo"><label>Nº da guia</label>
+      <input id="e-num" type="text" value="${esc(g.numero_guia)||''}"></div>
+    <div class="campo"><label>Código SIASS</label>
+      <input id="e-cod" type="text" value="${esc(g.codigo_siass)||''}"></div>
+    <div class="campo"><label>Data de emissão</label>
+      <input id="e-data" type="date" value="${g.data_emissao||''}"></div>
+    <div id="e-erro" class="erro hide"></div>
+    <div class="acoes">
+      <button class="btn branco" id="e-volta">Voltar</button>
+      <button class="btn azul" id="e-salvar">Salvar</button>
+    </div>`);
+  o.querySelector('#e-volta').onclick = ()=> abrirGuia(g);   // volta pra guia sem alterar
+  o.querySelector('#e-nome').focus();
+  o.querySelector('#e-salvar').onclick = async ()=>{
+    const nome=o.querySelector('#e-nome').value.trim();
+    const er=o.querySelector('#e-erro');
+    if(!nome){ er.textContent='O nome é obrigatório.'; er.classList.remove('hide'); return; }
+    const dados = {
+      nome,
+      numero_guia: o.querySelector('#e-num').value.trim()||null,
+      codigo_siass: o.querySelector('#e-cod').value.trim()||null,
+      data_emissao: o.querySelector('#e-data').value||null
+    };
+    const b=o.querySelector('#e-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+    const { error } = await sb.from('guias').update(dados).eq('id', g.id);
+    if(error){ b.disabled=false; b.textContent='Salvar'; er.textContent=error.message; er.classList.remove('hide'); return; }
+    Object.assign(g, dados);          // atualiza em memória
+    toast('Guia atualizada!','ok');
+    recarregar();                     // atualiza a lista atrás
+    abrirGuia(g);                     // reabre a guia já com os dados novos
+  };
+}
+
 function caminho(remId, guiaId, fileName){
   const limpo = (fileName||'arquivo').replace(/[^\w.\-]+/g,'_').slice(-80);
   return `${USER.id}/${remId}/${guiaId}/${Date.now()}_${limpo}`;
@@ -826,6 +882,7 @@ async function abrirGuia(g){
       <button class="btn branco" id="g-troca">${g.arquivo_path?'Trocar arquivo':'Subir arquivo'}</button>
     </div>
     <div class="acoes" style="margin-top:10px">
+      <button class="btn branco" id="g-editar">✎ Editar dados</button>
       <button class="btn verm" id="g-del">Apagar guia</button>
       <button class="btn branco" data-x style="flex:0 0 auto">Fechar</button>
     </div>
@@ -835,6 +892,7 @@ async function abrirGuia(g){
   function fechar(){ fecharModal(); if(mudou) recarregar(); }
   o.querySelector('[data-x]').onclick = fechar;
   o.addEventListener('click', e=>{ if(e.target===o && mudou) recarregar(); });
+  o.querySelector('#g-editar').onclick = ()=> editarGuia(g);
 
   const paper = o.querySelector('#paper');
   function pintarPapel(){
