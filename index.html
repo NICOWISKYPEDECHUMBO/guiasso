@@ -226,9 +226,15 @@
     #printarea, #printarea *{visibility:visible!important}
     #printarea{display:block!important;position:absolute;left:0;top:0;width:100%;
       -webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .p-head{margin-bottom:14px;border-bottom:3px solid #1a1714;padding-bottom:8px}
-    .p-etq{font-family:'Bangers',cursive;font-size:30px;letter-spacing:1px;color:#1a1714}
-    .p-sub{font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#333}
+    .p-drawerwrap{background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(0,0,0,.05) 20%,rgba(0,0,0,.18)),var(--tint);
+      border:3px solid #1a1714;border-radius:12px;padding:14px;margin-bottom:6px}
+    .p-drawer{display:flex;align-items:center;gap:14px;padding:0 14px;min-height:60px;border:3px solid #1a1714;border-radius:8px;
+      background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(0,0,0,.16))}
+    .p-knob{width:60px;height:13px;border-radius:7px;background:rgba(0,0,0,.42);border:2px solid rgba(0,0,0,.55);flex:none}
+    .p-etiqueta{flex:1;background:#f3ecd8;border:2.5px solid #1a1714;border-radius:6px;transform:rotate(-.6deg);padding:6px 12px;
+      font-family:'Patrick Hand',cursive;font-size:22px;color:#1a1714;word-break:break-word}
+    .p-count{font-family:'Patrick Hand',cursive;font-weight:700;font-size:14px;color:#1a1714;white-space:nowrap;flex:none}
+    .p-sub{font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#333;margin-bottom:14px}
     .p-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
     .p-card{border:2.5px solid #1a1714;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center;
       break-inside:avoid;background:#fff}
@@ -568,10 +574,14 @@ async function imprimirGaveta(rem){
   }).join('');
   const pa = document.getElementById('printarea');
   pa.innerHTML = `
-    <div class="p-head">
-      <div class="p-etq">${esc(rem.nome)}</div>
-      <div class="p-sub">Armário: ${esc(armarioAtual?.nome||'')} · ${guias.length} ${guias.length===1?'guia':'guias'} · impresso em ${dataImp}</div>
+    <div class="p-drawerwrap" style="--tint:${esc(armarioAtual?.cor||'#8e5bd9')}">
+      <div class="p-drawer">
+        <div class="p-knob"></div>
+        <div class="p-etiqueta">${esc(rem.nome)}</div>
+        <div class="p-count">${guias.length} ${guias.length===1?'guia':'guias'}</div>
+      </div>
     </div>
+    <div class="p-sub">Armário: ${esc(armarioAtual?.nome||'')} · impresso em ${dataImp}</div>
     <div class="p-grid">${cards || '<div style="padding:20px;font-family:sans-serif">Gaveta sem guias.</div>'}</div>`;
   window.print();
 }
