@@ -217,6 +217,29 @@
   .selo-tag{font-family:'Bangers',cursive;letter-spacing:.5px;font-size:12px;border:2px solid var(--ink);color:var(--ink);
     border-radius:6px;padding:1px 6px;background:#fff}
 
+  /* ---------- IMPRESSÃO da gaveta ---------- */
+  #printarea{display:none}
+  @media print{
+    @page{margin:12mm}
+    body{background:#fff!important}
+    body *{visibility:hidden!important}
+    #printarea, #printarea *{visibility:visible!important}
+    #printarea{display:block!important;position:absolute;left:0;top:0;width:100%;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .p-head{margin-bottom:14px;border-bottom:3px solid #1a1714;padding-bottom:8px}
+    .p-etq{font-family:'Bangers',cursive;font-size:30px;letter-spacing:1px;color:#1a1714}
+    .p-sub{font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#333}
+    .p-grid{display:grid;gap:12px;grid-template-columns:repeat(3,1fr)}
+    .p-card{border:2.5px solid #1a1714;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center;
+      break-inside:avoid;background:#fff}
+    .p-boneco{width:100%;aspect-ratio:1;border:2.5px solid #1a1714;border-radius:8px;overflow:hidden}
+    .p-boneco svg{display:block;width:100%;height:100%}
+    .p-nome{font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;text-align:center;line-height:1.15;color:#1a1714}
+    .p-tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+    .p-tag{font-family:'Nunito',sans-serif;font-size:10px;font-weight:800;border:1.5px solid #1a1714;border-radius:10px;padding:0 6px;color:#1a1714}
+    .p-selo{font-family:'Bangers',cursive;font-size:11px;letter-spacing:.5px;border:1.5px solid var(--ink);color:var(--ink);border-radius:5px;padding:0 6px}
+  }
+
   /* toast */
   #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center}
   .toast{background:var(--tinta);color:#fff;font-weight:800;border-radius:12px;padding:10px 16px;box-shadow:var(--sombra-p);
@@ -283,6 +306,7 @@
 
 <div id="toast"></div>
 <div id="modais"></div>
+<div id="printarea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -516,10 +540,40 @@ async function abrirArmario(arm){
 async function abrirRemessa(rem){
   remessaAtual = rem;
   $('#busca').value=''; $('#busca').placeholder='Buscar guia nesta remessa…';
-  elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <a id="v-arm">🗂️ ${esc(armarioAtual?.nome||'')}</a> <span>›</span> <span>📁 ${esc(rem.nome)}</span>`;
+  elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <a id="v-arm">🗂️ ${esc(armarioAtual?.nome||'')}</a> <span>›</span> <span>📁 ${esc(rem.nome)}</span>
+    <button id="print-gaveta" class="btn branco" style="padding:5px 10px;font-size:13px;margin-left:6px">🖨️ Imprimir</button>`;
   $('#v-home').onclick = irHome;
   $('#v-arm').onclick = ()=> abrirArmario(armarioAtual);
+  $('#print-gaveta').onclick = ()=> imprimirGaveta(rem);
   await renderGuias(rem);
+}
+
+async function imprimirGaveta(rem){
+  const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false).order('criado_em',{ascending:false});
+  if(error){ toast('Erro ao preparar impressão: '+error.message,'bad'); return; }
+  const hoje = new Date(); const p=n=>String(n).padStart(2,'0');
+  const dataImp = `${p(hoje.getDate())}/${p(hoje.getMonth()+1)}/${hoje.getFullYear()}`;
+  const cards = (guias||[]).map(g=>{
+    const cs = (g.meta && g.meta.carimbos) || [];
+    const ult = cs.slice(-2).reverse();
+    return `<div class="p-card">
+      <div class="p-boneco">${boneco(g.boneco_seed||1)}</div>
+      <div class="p-nome">${esc(g.nome)}</div>
+      <div class="p-tags">
+        ${g.numero_guia?`<span class="p-tag">nº ${esc(g.numero_guia)}</span>`:''}
+        ${g.arquivo_path?`<span class="p-tag">📎 arquivo</span>`:''}
+        ${ult.map(c=>`<span class="p-selo" style="--ink:${corCarimbo(c.t)}">${esc(c.t)}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  const pa = document.getElementById('printarea');
+  pa.innerHTML = `
+    <div class="p-head">
+      <div class="p-etq">${esc(rem.nome)}</div>
+      <div class="p-sub">Armário: ${esc(armarioAtual?.nome||'')} · ${guias.length} ${guias.length===1?'guia':'guias'} · impresso em ${dataImp}</div>
+    </div>
+    <div class="p-grid">${cards || '<div style="padding:20px;font-family:sans-serif">Gaveta sem guias.</div>'}</div>`;
+  window.print();
 }
 
 /* ===================================================================
