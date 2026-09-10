@@ -890,16 +890,16 @@ function formGuia(rem){
   const o = abrirModal(`
     <h2>Nova guia</h2>
     <p style="font-size:14px;font-weight:700;opacity:.75">Remessa: <b>${esc(rem.nome)}</b></p>
-    <div class="campo"><label>Arquivo da guia <span style="font-weight:400">(PDF ou imagem — lê sozinho ao subir)</span></label>
+    <div class="campo"><label>Arquivo da guia</label>
       <input id="g-arq" type="file" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html"></div>
     <div id="g-ocr" class="aviso hide"></div>
-    <div class="campo"><label>Nome (do servidor) <span style="font-weight:400">— item 13, lido pelo OCR</span></label>
-      <input id="g-nome" type="text" maxlength="160" placeholder="Preenche sozinho ao subir o arquivo"></div>
-    <div class="campo"><label>Nº da guia <span style="font-weight:400">(manual — de outro local)</span></label>
-      <input id="g-num" type="text" placeholder="Ex: 2378111536"></div>
-    <div class="campo"><label>Código SIASS <span style="font-weight:400">— lido pelo OCR</span></label>
-      <input id="g-cod" type="text" placeholder="Ex: F99D.7E08.B561.F7C2.86B7.6F2C"></div>
-    <div class="campo"><label>Data de emissão <span style="font-weight:400">(opcional)</span></label>
+    <div class="campo"><label>Nome</label>
+      <input id="g-nome" type="text" maxlength="160" placeholder=""></div>
+    <div class="campo"><label>Nº da guia</label>
+      <input id="g-num" type="text" placeholder=""></div>
+    <div class="campo"><label>Código SIASS</label>
+      <input id="g-cod" type="text" placeholder=""></div>
+    <div class="campo"><label>Data de emissão</label>
       <input id="g-data" type="date"></div>
     <div id="g-erro" class="erro hide"></div>
     <div class="acoes">
@@ -916,15 +916,15 @@ function formGuia(rem){
     const file = e.target.files[0]; if(!file) return;
     if(file.size > 20*1024*1024){ const er=o.querySelector('#g-erro'); er.textContent='Arquivo maior que 20 MB.'; er.classList.remove('hide'); return; }
     const legivel = file.type==='application/pdf' || file.type.indexOf('image/')===0;
-    if(!legivel){ mostraOcr('Arquivo anexado. (Leitura automática só funciona em PDF ou imagem.)'); return; }
-    mostraOcr('🔍 Lendo o documento... a 1ª vez baixa o motor de leitura, pode demorar um pouco.');
+    if(!legivel){ mostraOcr('Arquivo anexado.'); return; }
+    mostraOcr('Lendo o documento… (a primeira leitura baixa o motor e pode demorar)');
     try{
-      const r = await lerGuiaOCR(file, s => mostraOcr('🔍 '+s));
+      const r = await lerGuiaOCR(file, s => mostraOcr('Lendo… '+s));
       if(r.nome) o.querySelector('#g-nome').value = r.nome;
       if(r.codigo) o.querySelector('#g-cod').value = r.codigo;
-      mostraOcr('✅ Leitura pronta — confira e edite se precisar. O nº da guia é manual.');
+      mostraOcr('Leitura concluída. Confira os campos antes de salvar.');
     }catch(err){
-      mostraOcr('⚠️ Não consegui ler sozinho. Preencha à mão. ('+err.message+')');
+      mostraOcr('Não foi possível ler automaticamente. Preencha os campos manualmente.');
     }
   };
 
