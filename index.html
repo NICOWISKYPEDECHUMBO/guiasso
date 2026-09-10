@@ -189,9 +189,15 @@
     font-family:'Patrick Hand',cursive;font-size:18px;color:var(--tinta);cursor:pointer}
 
   /* ---------- carimbos / documento ---------- */
-  .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:180px;overflow:hidden;margin-top:6px;
+  .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:210px;overflow:hidden;margin-top:6px;
     background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,0,0,.05) 26px 27px);box-shadow:inset 0 0 0 2px #fff}
   .paper .vazp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Patrick Hand',cursive;opacity:.4;font-size:15px}
+  .carimbos-area{position:absolute;inset:0}
+  .selos-info{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-direction:column;gap:6px;align-items:center;z-index:3;pointer-events:none}
+  .selo-info{pointer-events:auto;cursor:pointer;border:3px double var(--ink);color:var(--ink);border-radius:8px;padding:2px 12px;
+    background:rgba(255,255,255,.6);transform:rotate(-2deg);text-shadow:0 0 1px var(--ink);max-width:96%;display:flex;align-items:baseline;gap:8px}
+  .selo-info b{font-family:'Nunito',sans-serif;font-size:9px;font-weight:800;letter-spacing:1px;opacity:.85}
+  .selo-info .lb2{font-family:'Bangers',cursive;letter-spacing:1px;font-size:16px;word-break:break-word;line-height:1.1}
   .carimbo{position:absolute;transform:translate(-50%,-50%) rotate(var(--r));text-align:center;pointer-events:none;
     border:3px double var(--ink);color:var(--ink);border-radius:10px;padding:3px 10px 2px;background:rgba(255,255,255,.06);
     opacity:.92;filter:contrast(1.05);text-shadow:0 0 1px var(--ink)}
@@ -826,27 +832,102 @@ function pintarGuias(guias, opts={}){
   });
 }
 
+/* ===== OCR — lê a guia sozinho ao subir (Tesseract + pdf.js carregados sob demanda) ===== */
+let OCR_LOADED = false;
+function carregarOCR(){
+  if(OCR_LOADED) return Promise.resolve();
+  const load = src => new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('sem internet pro leitor')); document.head.appendChild(s); });
+  return load('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js')
+    .then(()=> load('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'))
+    .then(()=>{ if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; OCR_LOADED=true; });
+}
+function _normGuia(s){ return s.toUpperCase().replace(/\s+/g,'.').replace(/O/g,'0').replace(/\.+/g,'.').replace(/^\.|\.$/g,''); }
+function _acharCodigo(texto){
+  const t=texto.toUpperCase();
+  let m=t.match(/([0-9A-Z]{4}[.\s][0-9A-Z]{4}[.\s][0-9A-Z]{4}[.\s][0-9A-Z]{4}[.\s][0-9A-Z]{4}[.\s][0-9A-Z]{4})/);
+  if(m) return _normGuia(m[1]);
+  m=t.match(/([0-9A-Z]{2,5}(?:[.\s][0-9A-Z]{2,5}){4,6})/);
+  if(m && /\d/.test(m[1]) && /[A-Z]/.test(m[1])) return _normGuia(m[1]);
+  m=t.match(/C[ÓO]DIGO:?\s*\n?\s*([0-9A-Z][0-9A-Z.\s]{16,44})/);
+  if(m){ let s=m[1].replace(/[^0-9A-Z.\s]/g,''); s=_normGuia(s); if(s.replace(/\./g,'').length>=18) return s; }
+  return '';
+}
+function _acharNome(texto){
+  let m=texto.match(/Servidor[\s\S]{0,40}?Nome[\s:]*([A-ZÁ-Ú][A-ZÁ-Úa-zá-ú' ]{5,55})/i);
+  if(!m) m=texto.match(/Nome[\s:]*([A-ZÁ-Ú]{2,}(?: [A-ZÁ-Úa-zá-ú']+){1,6})[\s\S]{0,30}?(?:Sexo|Data)/i);
+  return m ? m[1].replace(/\s+(Sexo|Data).*/i,'').trim() : '';
+}
+async function lerGuiaOCR(file, onStatus){
+  await carregarOCR();
+  let img=null;
+  if(file.type==='application/pdf'){
+    onStatus('preparando o PDF...');
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    const page=await pdf.getPage(1);
+    const vp=page.getViewport({scale:3});
+    const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    img=cv;
+  } else { img=file; }
+  onStatus('lendo o texto...');
+  const r=await Tesseract.recognize(img,'por',{logger:m=>{ if(m.status==='recognizing text') onStatus('lendo... '+Math.round((m.progress||0)*100)+'%'); }});
+  const texto=r.data.text;
+  let codigo=_acharCodigo(texto);
+  try{
+    onStatus('confirmando o código...');
+    const w=await Tesseract.createWorker('eng');
+    await w.setParameters({ tessedit_char_whitelist:'0123456789ABCDEF. ' });
+    const rc=await w.recognize(img);
+    await w.terminate();
+    const gg=_acharCodigo(rc.data.text);
+    if(gg) codigo=gg;
+  }catch(e){}
+  return { nome:_acharNome(texto), codigo, texto };
+}
+
 function formGuia(rem){
   const o = abrirModal(`
     <h2>Nova guia</h2>
     <p style="font-size:14px;font-weight:700;opacity:.75">Remessa: <b>${esc(rem.nome)}</b></p>
-    <div class="campo"><label>Nome (do servidor / da guia)</label>
-      <input id="g-nome" type="text" maxlength="160" placeholder="Ex: MARCO AURELIO MONTEIRO DUTRA"></div>
-    <div class="campo"><label>Nº da guia <span style="font-weight:400">(opcional)</span></label>
+    <div class="campo"><label>Arquivo da guia <span style="font-weight:400">(PDF ou imagem — lê sozinho ao subir)</span></label>
+      <input id="g-arq" type="file" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html"></div>
+    <div id="g-ocr" class="aviso hide"></div>
+    <div class="campo"><label>Nome (do servidor) <span style="font-weight:400">— item 13, lido pelo OCR</span></label>
+      <input id="g-nome" type="text" maxlength="160" placeholder="Preenche sozinho ao subir o arquivo"></div>
+    <div class="campo"><label>Nº da guia <span style="font-weight:400">(manual — de outro local)</span></label>
       <input id="g-num" type="text" placeholder="Ex: 2378111536"></div>
-    <div class="campo"><label>Código SIASS <span style="font-weight:400">(opcional)</span></label>
-      <input id="g-cod" type="text" placeholder="Ex: 0606.7304.15D7.3809.B372.D30E"></div>
+    <div class="campo"><label>Código SIASS <span style="font-weight:400">— lido pelo OCR</span></label>
+      <input id="g-cod" type="text" placeholder="Ex: F99D.7E08.B561.F7C2.86B7.6F2C"></div>
     <div class="campo"><label>Data de emissão <span style="font-weight:400">(opcional)</span></label>
       <input id="g-data" type="date"></div>
-    <div class="campo"><label>Arquivo da guia <span style="font-weight:400">(PDF, imagem ou HTML)</span></label>
-      <input id="g-arq" type="file" accept="application/pdf,image/*,text/html,.pdf,.png,.jpg,.jpeg,.webp,.html"></div>
     <div id="g-erro" class="erro hide"></div>
     <div class="acoes">
       <button class="btn branco" data-x>Cancelar</button>
       <button class="btn azul" id="g-salvar">Guardar guia</button>
     </div>`);
   o.querySelector('[data-x]').onclick = fecharModal;
-  o.querySelector('#g-nome').focus();
+
+  const ocrBox = o.querySelector('#g-ocr');
+  const mostraOcr = txt => { ocrBox.textContent = txt; ocrBox.classList.remove('hide'); };
+
+  // AUTO-OCR: ao subir o arquivo, lê sozinho e preenche Nome + Código (sem botão)
+  o.querySelector('#g-arq').onchange = async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    if(file.size > 20*1024*1024){ const er=o.querySelector('#g-erro'); er.textContent='Arquivo maior que 20 MB.'; er.classList.remove('hide'); return; }
+    const legivel = file.type==='application/pdf' || file.type.indexOf('image/')===0;
+    if(!legivel){ mostraOcr('Arquivo anexado. (Leitura automática só funciona em PDF ou imagem.)'); return; }
+    mostraOcr('🔍 Lendo o documento... a 1ª vez baixa o motor de leitura, pode demorar um pouco.');
+    try{
+      const r = await lerGuiaOCR(file, s => mostraOcr('🔍 '+s));
+      if(r.nome) o.querySelector('#g-nome').value = r.nome;
+      if(r.codigo) o.querySelector('#g-cod').value = r.codigo;
+      mostraOcr('✅ Leitura pronta — confira e edite se precisar. O nº da guia é manual.');
+    }catch(err){
+      mostraOcr('⚠️ Não consegui ler sozinho. Preencha à mão. ('+err.message+')');
+    }
+  };
+
   o.querySelector('#g-salvar').onclick = async ()=>{
     const erro = o.querySelector('#g-erro');
     const nome = o.querySelector('#g-nome').value.trim();
@@ -855,7 +936,6 @@ function formGuia(rem){
     if(file && file.size > 20*1024*1024){ erro.textContent='Arquivo maior que 20 MB.'; erro.classList.remove('hide'); return; }
     const b=o.querySelector('#g-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
     const seed = (Math.random()*1000000)|0;
-    // 1) cria a guia
     const { data:novo, error } = await sb.from('guias').insert({
       remessa_id: rem.id, nome,
       numero_guia: o.querySelector('#g-num').value.trim()||null,
@@ -864,7 +944,6 @@ function formGuia(rem){
       boneco_seed: seed
     }).select().single();
     if(error){ b.disabled=false; b.textContent='Guardar guia'; erro.textContent=error.message; erro.classList.remove('hide'); return; }
-    // 2) se tem arquivo, sobe pro cofre privado e salva o caminho
     if(file){
       const path = caminho(rem.id, novo.id, file.name);
       const up = await sb.storage.from(BUCKET).upload(path, file, { upsert:true, contentType:file.type||undefined });
@@ -960,11 +1039,14 @@ async function abrirGuia(g){
 
   const paper = o.querySelector('#paper');
   function pintarPapel(){
-    if(!g.meta.carimbos.length){ paper.innerHTML = `<div class="vazp">sem carimbos ainda</div>`; return; }
-    paper.innerHTML = g.meta.carimbos.map(c=>
-      `<div class="carimbo" style="--ink:${corCarimbo(c.t)};--r:${c.r||0}deg;left:${c.x||50}%;top:${c.y||50}%">
-         <span class="lb">${esc(c.t)}</span><span class="dt">${esc(dataHora(c.ts))}</span>
-       </div>`).join('');
+    const seloNome = g.nome ? `<div class="selo-info" style="--ink:#1b3a6b"><b>NOME</b> <span class="lb2">${esc(g.nome)}</span></div>` : '';
+    const seloCod  = g.codigo_siass ? `<div class="selo-info" style="--ink:#b02a2a"><b>CÓDIGO</b> <span class="lb2">${esc(g.codigo_siass)}</span></div>` : '';
+    const header = (seloNome||seloCod) ? `<div class="selos-info">${seloNome}${seloCod}</div>` : '';
+    const marcas = g.meta.carimbos.length
+      ? g.meta.carimbos.map(c=>`<div class="carimbo" style="--ink:${corCarimbo(c.t)};--r:${c.r||0}deg;left:${c.x||50}%;top:${c.y||50}%"><span class="lb">${esc(c.t)}</span><span class="dt">${esc(dataHora(c.ts))}</span></div>`).join('')
+      : '<div class="vazp">toque num carimbo abaixo</div>';
+    paper.innerHTML = header + `<div class="carimbos-area">${marcas}</div>`;
+    paper.querySelectorAll('.selo-info').forEach(s=> s.onclick = ()=> editarGuia(g)); // clicar edita o dado
   }
   pintarPapel();
 
@@ -976,25 +1058,26 @@ async function abrirGuia(g){
 
   // carimbar (estilo "bate no papel"): escolhe o tipo, o carimbo desce e marca com data/hora
   o.querySelectorAll('.cbtn').forEach(btn => btn.onclick = ()=>{
+    const area = paper.querySelector('.carimbos-area');
     const t = btn.dataset.t, ink = corCarimbo(t);
     const c = { t, ts:new Date().toISOString(),
-      x: 18 + Math.floor(Math.random()*58),
-      y: 18 + Math.floor(Math.random()*56),
+      x: 16 + Math.floor(Math.random()*60),
+      y: 42 + Math.floor(Math.random()*44),
       r: Math.floor(Math.random()*29) - 14 };
     const st = document.createElement('div');
     st.className = 'stamper desce'; st.style.setProperty('--ink', ink);
     st.innerHTML = `<div class="cabo"></div><div class="face">${esc(t)}</div>`;
-    paper.appendChild(st);
+    area.appendChild(st);
     paper.classList.remove('shake'); void paper.offsetWidth; paper.classList.add('shake');
     setTimeout(()=>{
       st.remove();
-      if(paper.querySelector('.vazp')) paper.innerHTML = '';
+      const vz = area.querySelector('.vazp'); if(vz) vz.remove();
       g.meta.carimbos.push(c);
       const el = document.createElement('div');
       el.className = 'carimbo novo';
       el.style.cssText = `--ink:${ink};--r:${c.r}deg;left:${c.x}%;top:${c.y}%`;
       el.innerHTML = `<span class="lb">${esc(t)}</span><span class="dt">${esc(dataHora(c.ts))}</span>`;
-      paper.appendChild(el);
+      area.appendChild(el);
       salvarCarimbos();
     }, 300);
   });
