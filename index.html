@@ -198,6 +198,12 @@
   .ex-vazio{font-family:'Patrick Hand',cursive;opacity:.7;font-size:14px;padding:4px 0}
   .ex-total{display:flex;align-items:center;gap:12px;margin-top:8px;font-weight:800;font-size:18px;border-top:2px solid var(--tinta);padding-top:8px}
   .ex-total b{color:#2f7d43}
+  .ex-topo{display:flex;align-items:center;gap:12px;margin:8px 0 12px;font-weight:800;font-size:19px;background:#eaf6ee;border:3px solid var(--tinta);border-radius:10px;padding:8px 12px}
+  .ex-topo b{color:#2f7d43;font-size:22px}
+  .total-pasta{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;background:#190a2e;
+    border:3px solid var(--tinta);border-radius:12px;padding:12px 14px;font-family:'Bangers',cursive;letter-spacing:1px;
+    font-size:22px;color:#c46bff;text-shadow:0 0 6px #b026ff,0 0 14px #a020f0;box-shadow:0 0 12px rgba(176,38,255,.45), var(--sombra-p)}
+  .total-pasta b{color:#efb6ff;font-size:27px;text-shadow:0 0 8px #d060ff,0 0 18px #b026ff}
 
   /* ---------- carimbos / documento ---------- */
   .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:210px;overflow:hidden;margin-top:6px;
@@ -814,6 +820,8 @@ function pintarGuias(guias, opts={}){
   elConteudo.className = 'grade';
   let html = '';
   if(opts.addPara){
+    const somaPasta = guias.reduce((s,g)=> s + ((g.meta && Number(g.meta.total))||0), 0);
+    html += `<div class="total-pasta">Total da pasta: <b>${fmtValor(somaPasta)}</b></div>`;
     html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
   }
   if(!guias.length){
@@ -877,16 +885,21 @@ function _acharExames(texto){
   if(i<0) return [];
   const bloco = texto.slice(i);
   const out=[]; const vistos=new Set();
+  const LIXO = /\b(RG|CPF|nascimento|matr[íi]cula|telefone|ans|cnpj|siape)\b/i;
   bloco.split(/\n+/).map(s=>s.trim()).forEach(ln=>{
-    const mc = ln.match(/\b(\d{8,10})\b/);          // exame = linha com código de 8+ dígitos
+    if(LIXO.test(ln)) return;                       // linha de RG/CPF/etc. não é exame
+    const mc = ln.match(/(?:^|[\s\-–—])(\d{8})(?!\d)/); // código de exame = 8 dígitos colados
     if(!mc) return;
     const codigo = mc[1];
-    if(vistos.has(codigo)) return; vistos.add(codigo);
+    // consulta (começa com 10) não precisa de nome; laboratório precisa de nome depois do código
+    const ehConsulta = /^10/.test(codigo);
     let d = ln.slice(ln.indexOf(codigo)+codigo.length).replace(/^[\s\-–—:]+/,'').trim();
     d = d.replace(/\bObserva[çc][ãa]o.*$/i,'').replace(/[-–—\s]+$/,'').trim();
+    if(!ehConsulta && d.replace(/[^A-Za-zÀ-ú]/g,'').length < 4) return; // sem nome de exame → descarta (evita RG/CPF)
+    if(vistos.has(codigo)) return; vistos.add(codigo);
     out.push({ codigo, desc:d, raw:ln });
   });
-  return out.slice(0,40);
+  return out.slice(0,60);
 }
 async function lerGuiaOCR(file, onStatus){
   await carregarOCR();
@@ -1231,9 +1244,9 @@ async function abrirGuia(g){
     <button id="c-desfazer" class="btn branco" style="margin-top:8px;padding:6px 12px;font-size:13px">↩ Desfazer último carimbo</button>
 
     <label style="font-weight:800;display:block;margin-top:16px">Exames e valor</label>
-    <div id="g-exames"></div>
-    <div class="ex-total">Total: <b id="g-total">R$ 0,00</b>
+    <div class="ex-topo">Total da guia: <b id="g-total">R$ 0,00</b>
       <button class="btn branco" id="g-add-ex" style="padding:4px 10px;font-size:13px;margin-left:auto">＋ Exame</button></div>
+    <div id="g-exames"></div>
 
     <div class="acoes" style="margin-top:16px">
       ${g.arquivo_path?`<button class="btn azul" id="g-abrir">Abrir arquivo</button>`:''}
