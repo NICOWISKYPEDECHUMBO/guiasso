@@ -300,6 +300,7 @@
     <div class="logo banger">ARQUIVO DE GUIAS</div>
     <div class="quem">
       <span class="email" id="u-email"></span>
+      <button id="u-valores" class="btn branco" style="padding:6px 12px">💲 Valores</button>
       <button id="u-sair" class="btn branco" style="padding:6px 12px">Sair</button>
     </div>
   </header>
@@ -471,6 +472,7 @@ $('#a-criar').onclick = async ()=>{
   }
 };
 $('#u-sair').onclick = async ()=>{ await sb.auth.signOut(); };
+$('#u-valores').onclick = tabelaValores;
 
 // Esqueci minha senha — envia link que funciona aqui ou em qualquer outro aparelho
 $('#a-esqueci').onclick = async ()=>{
@@ -884,6 +886,144 @@ async function lerGuiaOCR(file, onStatus){
     if(gg) codigo=gg;
   }catch(e){}
   return { nome:_acharNome(texto), codigo, texto };
+}
+
+/* ===================================================================
+   TABELA DE VALORES (GEAP · CNEM) — preços editáveis + busca de valor
+   =================================================================== */
+const parseValor = s => { s=(s||'').toString().trim().replace(/[^\d.,]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.'); const n=parseFloat(s); return isNaN(n)?0:n; };
+const fmtValor = n => 'R$ ' + (Number(n)||0).toFixed(2).replace('.',',');
+const normEx = s => (s||'').toString().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');
+
+/* tabela padrão extraída do seu app (GEAP + CNEM), já sem as linhas com erro de OCR */
+const PADRAO = [
+  ['PAPANICOLAU',38.10,'GEAP'],
+  ['TRANSAMINASE OXALACÉTICA (AMINO TRANSFERASE ASPARTATO) - PESQUISA E/OU DOSAGEM',9.94,'GEAP'],
+  ['SANGUE OCULTO PESQUISA NAS FEZES',11.89,'GEAP'],
+  ['TRIGLICERÍDEOS - PESQUISA E/OU DOSAGEM',9.56,'GEAP'],
+  ['HEPATITE B - HBSAG (AU ANTÍGENO AUSTRÁLIA) - PESQUISA E/OU DOSAGEM',19.07,'GEAP'],
+  ['COLESTEROL TOTAL - PESQUISA E/OU DOSAGEM',7.74,'GEAP'],
+  ['ANTÍGENO ESPECÍFICO PROSTÁTICO TOTAL (PSA) - PESQUISA E/OU DOSAGEM',34.63,'GEAP'],
+  ['HEPATITE B - HBSAC (ANTI-ANTÍGENO DE SUPERFÍCIE) - PESQUISA E/OU DOSAGEM',23.78,'GEAP'],
+  ['HEPATITE C - ANTI-HCV - PESQUISA E/OU DOSAGEM',45.08,'GEAP'],
+  ['TRANSAMINASE PIRÚVICA (AMINO TRANSFERASE DE ALANINA) - PESQUISA E/OU DOSAGEM',9.94,'GEAP'],
+  ['ROTINA DE URINA (CARACTERES FÍSICOS ELEMENTOS ANORMAIS E SEDIMENTOSCOPIA)',10.54,'GEAP'],
+  ['CREATININA - PESQUISA E/OU DOSAGEM',7.74,'GEAP'],
+  ['HEMOGRAMA COM CONTAGEM DE PLAQUETAS OU FRAÇÕES (ERITROGRAMA LEUCOGRAMA PLAQUETAS)',10.93,'GEAP'],
+  ['CLÍNICO',80.00,'GEAP'],
+  ['FOSFATASE ALCALINA - PESQUISA E/OU DOSAGEM',11.44,'GEAP'],
+  ['PROTEÍNAS TOTAIS - PESQUISA E/OU DOSAGEM',7.00,'GEAP'],
+  ['GAMA-GLUTAMIL TRANSFERASE - PESQUISA E/OU DOSAGEM',3.53,'GEAP'],
+  ['BILIRRUBINAS (DIRETA, INDIRETA E TOTAL) - PESQUISA E/OU DOSAGEM',2.18,'GEAP'],
+  ['COLINESTERASE (PARA CARBAMATOS ORGANOFOSFORADOS) - PESQUISA E/OU DOSAGEM',3.65,'GEAP'],
+  ['ACETILCOLINESTERASE, EM ERITRÓCITOS - PESQUISA E/OU DOSAGEM',14.25,'GEAP'],
+  ['GLICOSE - PESQUISA E/OU DOSAGEM',7.74,'GEAP'],
+  ['AVALIAÇÃO GINECOLÓGICA',93.86,'CNEM'],
+  ['OFTALMOLÓGICO (ACUIDADE VISUAL)',93.86,'CNEM'],
+  ['HEPATITE B - HBCAC - IGM (ANTI-CORE IGM OU ACOREM) - PESQUISA E/OU DOSAGEM',45.38,'CNEM'],
+  ['PROTEÍNAS TOTAIS - PESQUISA E/OU DOSAGEM',6.66,'CNEM'],
+  ['ACETILCOLINESTERASE, EM ERITRÓCITOS - PESQUISA E/OU DOSAGEM',14.25,'CNEM'],
+  ['HEPATITE B - HBCAC - IGG (ANTI-CORE IGM OU ACOREM) - PESQUISA E/OU DOSAGEM',37.26,'CNEM'],
+  ['FOSFATASE ALCALINA - PESQUISA E/OU DOSAGEM',16.02,'CNEM'],
+  ['GAMA-GLUTAMIL TRANSFERASE - PESQUISA E/OU DOSAGEM',3.53,'CNEM'],
+  ['BILIRRUBINAS (DIRETA, INDIRETA E TOTAL) - PESQUISA E/OU DOSAGEM',2.18,'CNEM'],
+  ['COLINESTERASE (PARA CARBAMATOS ORGANOFOSFORADOS) - PESQUISA E/OU DOSAGEM',3.65,'CNEM'],
+  ['MAMOGRAFIA DIGITAL BILATERAL',123.10,'CNEM'],
+  ['GLICOSE - PESQUISA E/OU DOSAGEM',7.51,'CNEM'],
+];
+
+let PRECOS = null;   // cache: [{nome, fonte, valor}]
+async function carregarPrecos(force){
+  if(PRECOS && !force) return PRECOS;
+  const { data, error } = await sb.from('tabela_precos').select('*').order('nome');
+  if(error){ toast('Erro na tabela de valores: '+error.message,'bad'); return PRECOS||[]; }
+  PRECOS = data||[]; return PRECOS;
+}
+/* valor de um exame pela descrição: tenta GEAP primeiro, depois CNEM (igual seu app) */
+function valorDoExame(desc){
+  if(!PRECOS) return null;
+  const nd = normEx(desc);
+  const busca = fonte => {
+    let melhor=null;
+    for(const p of PRECOS){ if(p.fonte!==fonte) continue; const nk=normEx(p.nome);
+      if(nd===nk || nd.startsWith(nk) || nk.startsWith(nd) || nd.includes(nk)){
+        if(!melhor || nk.length>normEx(melhor.nome).length) melhor=p;   // casa o nome mais específico
+      } }
+    return melhor;
+  };
+  return busca('GEAP') || busca('CNEM');
+}
+
+async function tabelaValores(){
+  await carregarPrecos(true);
+  const o = abrirModal(`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2>Tabela de Valores <span style="font-size:16px;font-weight:400">(GEAP · CNEM)</span></h2>
+      <button class="btn verm" data-x style="padding:6px 12px;flex:0 0 auto">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <input id="tv-nome" type="text" placeholder="Nome do exame" style="flex:2;min-width:140px">
+      <input id="tv-valor" type="text" placeholder="Valor" style="flex:0 0 90px">
+      <select id="tv-fonte" style="flex:0 0 90px;font-family:inherit;font-weight:700;border:3px solid var(--tinta);border-radius:10px;padding:8px">
+        <option>GEAP</option><option>CNEM</option></select>
+      <button class="btn azul" id="tv-add">Adicionar</button>
+    </div>
+    <div id="tv-erro" class="erro hide"></div>
+    <div id="tv-lista" style="margin-top:14px;max-height:52vh;overflow:auto"></div>`);
+  o.querySelector('[data-x]').onclick = fecharModal;
+
+  const lista = o.querySelector('#tv-lista');
+  function pintar(){
+    if(!PRECOS.length){
+      lista.innerHTML = `<div class="vazio" style="padding:16px"><div class="balao">Tabela vazia.<br>
+        <button class="btn azul" id="tv-padrao" style="margin-top:10px">Carregar tabela padrão (GEAP+CNEM)</button></div></div>`;
+      lista.querySelector('#tv-padrao').onclick = async ()=>{
+        const b=lista.querySelector('#tv-padrao'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
+        const linhas = PADRAO.map(([nome,valor,fonte])=>({nome,valor,fonte}));
+        const { error } = await sb.from('tabela_precos').insert(linhas);
+        if(error){ toast('Erro ao carregar padrão: '+error.message,'bad'); b.disabled=false; b.textContent='Carregar tabela padrão (GEAP+CNEM)'; return; }
+        await carregarPrecos(true); toast('Tabela padrão carregada!','ok'); pintar();
+      };
+      return;
+    }
+    lista.innerHTML = `<table style="width:100%;border-collapse:collapse;font-weight:700;font-size:14px">
+      <thead><tr style="background:var(--tinta);color:var(--creme)">
+        <th style="text-align:left;padding:6px 8px">Exame</th><th style="padding:6px 8px">Fonte</th>
+        <th style="padding:6px 8px">Valor</th><th style="padding:6px 8px"></th></tr></thead>
+      <tbody>${PRECOS.map(p=>`<tr data-id="${p.id}" style="border-bottom:1px solid var(--tinta)">
+        <td style="padding:6px 8px">${esc(p.nome)}</td>
+        <td style="padding:6px 8px;text-align:center">${esc(p.fonte)}</td>
+        <td style="padding:6px 8px;text-align:right"><input class="tv-v" value="${fmtValor(p.valor).replace('R$ ','')}" style="width:78px;text-align:right;border:2px solid var(--tinta);border-radius:8px;padding:2px 6px;font-family:inherit;font-weight:700"></td>
+        <td style="padding:6px 8px;text-align:center"><button class="btn verm tv-del" style="padding:3px 10px;font-size:12px">Remover</button></td>
+      </tr>`).join('')}</tbody></table>`;
+    lista.querySelectorAll('tr[data-id]').forEach(tr=>{
+      const id=tr.dataset.id;
+      tr.querySelector('.tv-v').onchange = async (e)=>{
+        const v=parseValor(e.target.value);
+        await sb.from('tabela_precos').update({valor:v}).eq('id',id);
+        await carregarPrecos(true); toast('Valor atualizado','ok');
+      };
+      tr.querySelector('.tv-del').onclick = async ()=>{
+        const p=PRECOS.find(x=>x.id===id);
+        if(!await confirmar('Remover exame?', `Remover "${p.nome}" (${p.fonte}) da tabela?`, 'Remover')) return;
+        await sb.from('tabela_precos').delete().eq('id',id);
+        await carregarPrecos(true); pintar(); toast('Removido','ok');
+      };
+    });
+  }
+  pintar();
+
+  o.querySelector('#tv-add').onclick = async ()=>{
+    const nome=o.querySelector('#tv-nome').value.trim();
+    const valor=parseValor(o.querySelector('#tv-valor').value);
+    const fonte=o.querySelector('#tv-fonte').value;
+    const er=o.querySelector('#tv-erro');
+    if(!nome){ er.textContent='Escreva o nome do exame.'; er.classList.remove('hide'); return; }
+    const { error } = await sb.from('tabela_precos').insert({nome,valor,fonte});
+    if(error){ er.textContent=error.message; er.classList.remove('hide'); return; }
+    o.querySelector('#tv-nome').value=''; o.querySelector('#tv-valor').value=''; er.classList.add('hide');
+    await carregarPrecos(true); pintar();
+  };
 }
 
 function formGuia(rem){
