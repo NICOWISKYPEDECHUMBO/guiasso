@@ -875,17 +875,16 @@ function _acharNome(texto){
 function _acharExames(texto){
   const i = texto.search(/Exames?\s+(Requisitados|Solicitados)/i);
   if(i<0) return [];
-  let bloco = texto.slice(i).replace(/Exames?\s+(Requisitados|Solicitados)/i,'');
-  bloco = bloco.split(/autenticidade|assinatura|carimbo do|_{6,}|-{6,}/i)[0];
-  const out=[];
-  bloco.split(/\n+/).map(s=>s.trim()).filter(Boolean).forEach(ln=>{
-    const mc = ln.match(/(\d{6,10})/);
-    const codigo = mc ? mc[1] : '';
-    let d = ln.replace(/^[\s\-–—]*\d{6,10}\s*[-–—]?\s*/,'').replace(/^[-–—\s]+/,'').trim();
+  const bloco = texto.slice(i);
+  const out=[]; const vistos=new Set();
+  bloco.split(/\n+/).map(s=>s.trim()).forEach(ln=>{
+    const mc = ln.match(/\b(\d{8,10})\b/);          // exame = linha com código de 8+ dígitos
+    if(!mc) return;
+    const codigo = mc[1];
+    if(vistos.has(codigo)) return; vistos.add(codigo);
+    let d = ln.slice(ln.indexOf(codigo)+codigo.length).replace(/^[\s\-–—:]+/,'').trim();
     d = d.replace(/\bObserva[çc][ãa]o.*$/i,'').replace(/[-–—\s]+$/,'').trim();
-    if(!codigo && d.replace(/[^A-Za-zÀ-ú]/g,'').length < 4) return;
-    if(/^(observa|per[ií]odo|data|[óo]rg[aã]o|munic|servidor|CPF|RG|nome|sexo|UF|telefone|endere)/i.test(d)) return;
-    out.push({ codigo, desc:d });
+    out.push({ codigo, desc:d, raw:ln });
   });
   return out.slice(0,40);
 }
@@ -1104,7 +1103,15 @@ function formGuia(rem){
       await carregarPrecos();
       examesSugeridos = (r.exames||[]).map(e=>{
         const consulta = /^10/.test(e.codigo||'');
-        if(consulta) return { desc:e.desc, codigo:e.codigo, modo:'consulta', id:null, nome:'', fonte:'', valor:0 };
+        if(consulta){
+          const low = (e.raw||e.desc||'').toLowerCase();
+          const chave = /oftalmol|acuidade|visual/.test(low) ? 'OFTALMOLOG'
+                      : /ginecol/.test(low) ? 'GINECOLOG'
+                      : /cl[ií]nic/.test(low) ? 'CLINICO' : '';
+          const p = chave ? precoPorChave(chave) : null;
+          return p ? { desc:e.desc, codigo:e.codigo, modo:'consulta', id:p.id, nome:p.nome, fonte:p.fonte, valor:Number(p.valor) }
+                   : { desc:e.desc, codigo:e.codigo, modo:'consulta', id:null, nome:'', fonte:'', valor:0 };
+        }
         const p = valorDoExame(e.desc);
         return p ? { desc:e.desc, codigo:e.codigo, modo:'tabela', id:p.id, nome:p.nome, fonte:p.fonte, valor:Number(p.valor) }
                  : { desc:e.desc, codigo:e.codigo, modo:'tabela', id:null, nome:'', fonte:'', valor:0 };
