@@ -188,6 +188,17 @@
   .add-drawer{width:100%;min-height:52px;border:3px dashed var(--tinta);border-radius:8px;background:rgba(255,255,255,.32);
     font-family:'Patrick Hand',cursive;font-size:18px;color:var(--tinta);cursor:pointer}
 
+  /* ---------- exames e total na guia ---------- */
+  .ex-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .ex-sel{flex:1;min-width:150px;font-family:inherit;font-weight:700;border:3px solid var(--tinta);border-radius:10px;padding:7px;background:#fff;color:var(--tinta)}
+  .ex-val{font-weight:800;white-space:nowrap;min-width:78px;text-align:right}
+  .ex-del{border:2px solid var(--tinta);background:var(--vermelho);color:#fff;border-radius:8px;width:28px;height:28px;font-weight:800;cursor:pointer;flex:none}
+  .ex-modo{border:2px solid var(--tinta);background:var(--amarelo2);color:var(--tinta);border-radius:8px;padding:2px 8px;font-weight:800;font-size:11px;cursor:pointer;flex:none}
+  .ex-desc{flex-basis:100%;font-family:'Patrick Hand',cursive;font-size:12px;opacity:.7;margin:-2px 0 2px}
+  .ex-vazio{font-family:'Patrick Hand',cursive;opacity:.7;font-size:14px;padding:4px 0}
+  .ex-total{display:flex;align-items:center;gap:12px;margin-top:8px;font-weight:800;font-size:18px;border-top:2px solid var(--tinta);padding-top:8px}
+  .ex-total b{color:#2f7d43}
+
   /* ---------- carimbos / documento ---------- */
   .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:210px;overflow:hidden;margin-top:6px;
     background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,0,0,.05) 26px 27px);box-shadow:inset 0 0 0 2px #fff}
@@ -813,6 +824,7 @@ function pintarGuias(guias, opts={}){
   guias.forEach(g=>{
     const cs = (g.meta && g.meta.carimbos) || [];
     const ult = cs.slice(-2).reverse();
+    const total = (g.meta && Number(g.meta.total)) || 0;
     html += `<div class="pasta" data-id="${g.id}">
       <div class="aba"></div>
       <div class="corpo">
@@ -821,6 +833,7 @@ function pintarGuias(guias, opts={}){
         ${g.__remnome ? `<div class="remlbl">📦 ${esc(g.__remnome)}</div>`:''}
         <div class="tags">
           ${g.numero_guia?`<span class="tag">nº ${esc(g.numero_guia)}</span>`:''}
+          ${total>0?`<span class="tag" style="background:#d7f0dd">${fmtValor(total)}</span>`:''}
           ${g.arquivo_path?`<span class="tag clip">arquivo</span>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
         </div>
         ${ult.length?`<div class="tags">${ult.map(c=>`<span class="selo-tag" style="--ink:${corCarimbo(c.t)}">${esc(c.t)}</span>`).join('')}</div>`:''}
@@ -859,6 +872,23 @@ function _acharNome(texto){
   if(!m) m=texto.match(/Nome[\s:]*([A-ZÁ-Ú]{2,}(?: [A-ZÁ-Úa-zá-ú']+){1,6})[\s\S]{0,30}?(?:Sexo|Data)/i);
   return m ? m[1].replace(/\s+(Sexo|Data).*/i,'').trim() : '';
 }
+function _acharExames(texto){
+  const i = texto.search(/Exames?\s+(Requisitados|Solicitados)/i);
+  if(i<0) return [];
+  let bloco = texto.slice(i).replace(/Exames?\s+(Requisitados|Solicitados)/i,'');
+  bloco = bloco.split(/autenticidade|assinatura|carimbo do|_{6,}|-{6,}/i)[0];
+  const out=[];
+  bloco.split(/\n+/).map(s=>s.trim()).filter(Boolean).forEach(ln=>{
+    const mc = ln.match(/(\d{6,10})/);
+    const codigo = mc ? mc[1] : '';
+    let d = ln.replace(/^[\s\-–—]*\d{6,10}\s*[-–—]?\s*/,'').replace(/^[-–—\s]+/,'').trim();
+    d = d.replace(/\bObserva[çc][ãa]o.*$/i,'').replace(/[-–—\s]+$/,'').trim();
+    if(!codigo && d.replace(/[^A-Za-zÀ-ú]/g,'').length < 4) return;
+    if(/^(observa|per[ií]odo|data|[óo]rg[aã]o|munic|servidor|CPF|RG|nome|sexo|UF|telefone|endere)/i.test(d)) return;
+    out.push({ codigo, desc:d });
+  });
+  return out.slice(0,40);
+}
 async function lerGuiaOCR(file, onStatus){
   await carregarOCR();
   let img=null;
@@ -885,7 +915,7 @@ async function lerGuiaOCR(file, onStatus){
     const gg=_acharCodigo(rc.data.text);
     if(gg) codigo=gg;
   }catch(e){}
-  return { nome:_acharNome(texto), codigo, texto };
+  return { nome:_acharNome(texto), codigo, texto, exames:_acharExames(texto) };
 }
 
 /* ===================================================================
@@ -953,6 +983,14 @@ function valorDoExame(desc){
   };
   return busca('GEAP') || busca('CNEM');
 }
+
+/* consultas do código que começa com 10 (3 opções) */
+const CONSULTAS = [
+  { rot:'Avaliação Clínica',                    chave:'CLINICO' },
+  { rot:'Avaliação Ginecológica',               chave:'GINECOLOG' },
+  { rot:'Acuidade Visual (Oftalmológico)',      chave:'OFTALMOLOG' },
+];
+function precoPorChave(chave){ return PRECOS ? (PRECOS.find(p=> normEx(p.nome).includes(chave)) || null) : null; }
 
 async function tabelaValores(){
   await carregarPrecos(true);
@@ -1051,6 +1089,7 @@ function formGuia(rem){
   const ocrBox = o.querySelector('#g-ocr');
   const mostraOcr = txt => { ocrBox.textContent = txt; ocrBox.classList.remove('hide'); };
 
+  let examesSugeridos = [];   // exames lidos e já casados com a tabela
   // AUTO-OCR: ao subir o arquivo, lê sozinho e preenche Nome + Código (sem botão)
   o.querySelector('#g-arq').onchange = async (e)=>{
     const file = e.target.files[0]; if(!file) return;
@@ -1062,7 +1101,17 @@ function formGuia(rem){
       const r = await lerGuiaOCR(file, s => mostraOcr('Lendo… '+s));
       if(r.nome) o.querySelector('#g-nome').value = r.nome;
       if(r.codigo) o.querySelector('#g-cod').value = r.codigo;
-      mostraOcr('Leitura concluída. Confira os campos antes de salvar.');
+      await carregarPrecos();
+      examesSugeridos = (r.exames||[]).map(e=>{
+        const consulta = /^10/.test(e.codigo||'');
+        if(consulta) return { desc:e.desc, codigo:e.codigo, modo:'consulta', id:null, nome:'', fonte:'', valor:0 };
+        const p = valorDoExame(e.desc);
+        return p ? { desc:e.desc, codigo:e.codigo, modo:'tabela', id:p.id, nome:p.nome, fonte:p.fonte, valor:Number(p.valor) }
+                 : { desc:e.desc, codigo:e.codigo, modo:'tabela', id:null, nome:'', fonte:'', valor:0 };
+      });
+      const achou = examesSugeridos.filter(x=>x.id).length;
+      const consultas = examesSugeridos.filter(x=>x.modo==='consulta').length;
+      mostraOcr(`Leitura concluída. Confira os campos antes de salvar.${examesSugeridos.length?` Exames lidos: ${examesSugeridos.length} (${achou} com valor${consultas?`, ${consultas} consulta(s) pra escolher`:''}).`:''}`);
     }catch(err){
       mostraOcr('Não foi possível ler automaticamente. Preencha os campos manualmente.');
     }
@@ -1076,12 +1125,14 @@ function formGuia(rem){
     if(file && file.size > 20*1024*1024){ erro.textContent='Arquivo maior que 20 MB.'; erro.classList.remove('hide'); return; }
     const b=o.querySelector('#g-salvar'); b.disabled=true; b.innerHTML='<span class="spin"></span>';
     const seed = (Math.random()*1000000)|0;
+    const total = examesSugeridos.reduce((s,x)=> s + (Number(x.valor)||0), 0);
     const { data:novo, error } = await sb.from('guias').insert({
       remessa_id: rem.id, nome,
       numero_guia: o.querySelector('#g-num').value.trim()||null,
       codigo_siass: o.querySelector('#g-cod').value.trim()||null,
       data_emissao: o.querySelector('#g-data').value||null,
-      boneco_seed: seed
+      boneco_seed: seed,
+      meta: { exames: examesSugeridos, total: total }
     }).select().single();
     if(error){ b.disabled=false; b.textContent='Guardar guia'; erro.textContent=error.message; erro.classList.remove('hide'); return; }
     if(file){
@@ -1160,6 +1211,11 @@ async function abrirGuia(g){
     <div class="paleta">${paleta}</div>
     <button id="c-desfazer" class="btn branco" style="margin-top:8px;padding:6px 12px;font-size:13px">↩ Desfazer último carimbo</button>
 
+    <label style="font-weight:800;display:block;margin-top:16px">Exames e valor</label>
+    <div id="g-exames"></div>
+    <div class="ex-total">Total: <b id="g-total">R$ 0,00</b>
+      <button class="btn branco" id="g-add-ex" style="padding:4px 10px;font-size:13px;margin-left:auto">＋ Exame</button></div>
+
     <div class="acoes" style="margin-top:16px">
       ${g.arquivo_path?`<button class="btn azul" id="g-abrir">Abrir arquivo</button>`:''}
       <button class="btn branco" id="g-troca">${g.arquivo_path?'Trocar arquivo':'Subir arquivo'}</button>
@@ -1229,6 +1285,73 @@ async function abrirGuia(g){
     await salvarCarimbos();
     toast('Último carimbo removido.','ok');
   };
+
+  // ----- Exames e valor -----
+  if(!Array.isArray(g.meta.exames)) g.meta.exames = [];
+  async function salvarExames(){
+    mudou = true;
+    g.meta.total = g.meta.exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
+    await sb.from('guias').update({ meta: g.meta }).eq('id', g.id);
+  }
+  async function renderExames(){
+    await carregarPrecos();
+    const cont = o.querySelector('#g-exames');
+    const optsTabela = `<option value="">— escolher exame —</option>` + PRECOS.map(p=>`<option value="${p.id}">${esc(p.nome)} (${p.fonte}) — ${fmtValor(p.valor)}</option>`).join('');
+    if(!g.meta.exames.length){
+      cont.innerHTML = `<div class="ex-vazio">Nenhum exame. Toque em ＋ Exame para adicionar.</div>`;
+    } else {
+      cont.innerHTML = g.meta.exames.map((x,idx)=>{
+        const modo = x.modo || 'tabela';
+        let selHtml;
+        if(modo==='consulta'){
+          const opc = CONSULTAS.map(c=>{ const p=precoPorChave(c.chave); return `<option value="${c.chave}">${esc(c.rot)}${p?' — '+fmtValor(p.valor):''}</option>`; }).join('');
+          selHtml = `<select class="ex-sel"><option value="">— a definir —</option>${opc}</select>`;
+        } else {
+          selHtml = `<select class="ex-sel">${optsTabela}</select>`;
+        }
+        const lido = ((x.codigo?x.codigo+' ':'')+(x.desc||'')).trim();
+        return `<div class="ex-linha" data-i="${idx}">
+          ${lido ? `<div class="ex-desc">lido: ${esc(lido)}</div>`:''}
+          ${selHtml}
+          <span class="ex-val">${fmtValor(x.valor)}</span>
+          <button class="ex-modo" title="Alternar entre as 3 consultas e a tabela completa">${modo==='consulta'?'tabela':'3 consultas'}</button>
+          <button class="ex-del" title="Remover">✕</button>
+        </div>`;
+      }).join('');
+      cont.querySelectorAll('.ex-linha').forEach(l=>{
+        const i=+l.dataset.i, x=g.meta.exames[i], sel=l.querySelector('.ex-sel');
+        const modo = x.modo||'tabela';
+        if(modo==='consulta'){
+          const cc = CONSULTAS.find(c=>{ const p=precoPorChave(c.chave); return p && x.id===p.id; });
+          if(cc) sel.value=cc.chave;
+          sel.onchange = async ()=>{
+            const c = CONSULTAS.find(cc=>cc.chave===sel.value);
+            const p = c ? precoPorChave(c.chave) : null;
+            if(p){ x.id=p.id; x.nome=p.nome; x.fonte=p.fonte; x.valor=Number(p.valor); }
+            else { x.id=null; x.nome=''; x.fonte=''; x.valor=0; }
+            await salvarExames(); renderExames();
+          };
+        } else {
+          if(x.id) sel.value=x.id;
+          sel.onchange = async ()=>{
+            const p = PRECOS.find(pp=>pp.id===sel.value);
+            if(p){ x.id=p.id; x.nome=p.nome; x.fonte=p.fonte; x.valor=Number(p.valor); }
+            else { x.id=null; x.nome=''; x.fonte=''; x.valor=0; }
+            await salvarExames(); renderExames();
+          };
+        }
+        l.querySelector('.ex-modo').onclick = async ()=>{ x.modo = (modo==='consulta')?'tabela':'consulta'; await salvarExames(); renderExames(); };
+        l.querySelector('.ex-del').onclick = async ()=>{ g.meta.exames.splice(i,1); await salvarExames(); renderExames(); };
+      });
+    }
+    const total = g.meta.exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
+    o.querySelector('#g-total').textContent = fmtValor(total);
+  }
+  o.querySelector('#g-add-ex').onclick = async ()=>{
+    g.meta.exames.push({ desc:'', id:null, nome:'', fonte:'', valor:0 });
+    await salvarExames(); renderExames();
+  };
+  renderExames();
 
   if(g.arquivo_path){
     o.querySelector('#g-abrir').onclick = async ()=>{
