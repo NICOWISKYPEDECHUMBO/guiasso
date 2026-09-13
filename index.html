@@ -898,6 +898,29 @@ function _acharExames(texto){
   });
   return out.slice(0,60);
 }
+function _preproc(cv){
+  try{
+    const ctx=cv.getContext('2d'); const im=ctx.getImageData(0,0,cv.width,cv.height); const d=im.data;
+    for(let i=0;i<d.length;i+=4){
+      let g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+      g=(g-128)*1.7+138;                                  // aumenta contraste e clareia o fundo
+      g=g<0?0:(g>255?255:g);
+      const v=g<140?Math.max(0,g-50):Math.min(255,g+30);  // reforça o texto escuro
+      d[i]=d[i+1]=d[i+2]=v;
+    }
+    ctx.putImageData(im,0,0);
+  }catch(e){}
+  return cv;
+}
+function _imgParaCanvas(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ const cv=document.createElement('canvas'); cv.width=img.naturalWidth||img.width; cv.height=img.naturalHeight||img.height;
+      cv.getContext('2d').drawImage(img,0,0); URL.revokeObjectURL(url); res(cv); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('imagem inválida')); };
+    img.src=url;
+  });
+}
 async function lerGuiaOCR(file, onStatus){
   await carregarOCR();
   let texto=''; let primeiraImg=null;
@@ -907,21 +930,23 @@ async function lerGuiaOCR(file, onStatus){
       onStatus('preparando o PDF...');
       const buf=await file.arrayBuffer();
       const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
-      const n=Math.min(pdf.numPages, 20);
+      const n=Math.min(pdf.numPages, 25);
       for(let p=1;p<=n;p++){
         onStatus(`lendo página ${p} de ${n}…`);
         const page=await pdf.getPage(p);
-        const vp=page.getViewport({scale:2.6});
+        const vp=page.getViewport({scale:3});
         const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
         await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+        _preproc(cv);
         if(p===1) primeiraImg=cv;
         const rp=await worker.recognize(cv);
         texto += '\n' + rp.data.text;
       }
     } else {
-      primeiraImg=file;
       onStatus('lendo o texto…');
-      const rp=await worker.recognize(file);
+      const cv=_preproc(await _imgParaCanvas(file));
+      primeiraImg=cv;
+      const rp=await worker.recognize(cv);
       texto=rp.data.text;
     }
   } finally { try{ await worker.terminate(); }catch(e){} }
@@ -969,6 +994,9 @@ const PADRAO = [
   ['COLINESTERASE (PARA CARBAMATOS ORGANOFOSFORADOS) - PESQUISA E/OU DOSAGEM',3.65,'GEAP'],
   ['ACETILCOLINESTERASE, EM ERITRÓCITOS - PESQUISA E/OU DOSAGEM',14.25,'GEAP'],
   ['GLICOSE - PESQUISA E/OU DOSAGEM',7.74,'GEAP'],
+  ['URÉIA - PESQUISA E/OU DOSAGEM',7.50,'GEAP'],
+  ['RETICULÓCITOS, CONTAGEM',7.46,'GEAP'],
+  ['RETICULÓCITOS, CONTAGEM',7.46,'CNEM'],
   ['AVALIAÇÃO GINECOLÓGICA',93.86,'CNEM'],
   ['OFTALMOLÓGICO (ACUIDADE VISUAL)',93.86,'CNEM'],
   ['HEPATITE B - HBCAC - IGM (ANTI-CORE IGM OU ACOREM) - PESQUISA E/OU DOSAGEM',45.38,'CNEM'],
@@ -1024,6 +1052,7 @@ const COD_EXAME = {
   '40302512':'PIRUV', '40302040':'GLICOSE', '40301990':'GAMAGLUTAMIL',
   '40303136':'SANGUEOCULTO', '40307018':'HBSAG', '40307026':'ANTIHCV',
   '40306992':'HBSAC', '40306950':'HBCACIGG', '40306968':'HBCACIGM',
+  '40302580':'UREIA', '40304558':'RETICULOCITOS',
 };
 function precoPorCodigo(codigo){
   const chave = COD_EXAME[codigo]; if(!chave || !PRECOS) return null;
@@ -1053,6 +1082,7 @@ async function tabelaValores(){
       <select id="tv-fonte" style="flex:0 0 90px;font-family:inherit;font-weight:700;border:3px solid var(--tinta);border-radius:10px;padding:8px">
         <option>GEAP</option><option>CNEM</option></select>
       <button class="btn azul" id="tv-add">Adicionar</button>
+      <button class="btn branco" id="tv-completar" style="white-space:nowrap">＋ Completar padrão</button>
     </div>
     <div id="tv-erro" class="erro hide"></div>
     <div id="tv-lista" style="margin-top:14px;max-height:52vh;overflow:auto"></div>`);
@@ -1099,6 +1129,16 @@ async function tabelaValores(){
   }
   pintar();
 
+  o.querySelector('#tv-completar').onclick = async ()=>{
+    await carregarPrecos(true);
+    const existe = new Set(PRECOS.map(p=> normEx(p.nome)+'|'+p.fonte));
+    const faltando = PADRAO.filter(([nome,valor,fonte])=> !existe.has(normEx(nome)+'|'+fonte)).map(([nome,valor,fonte])=>({nome,valor,fonte}));
+    if(!faltando.length){ toast('A tabela já está completa.','ok'); return; }
+    const { error } = await sb.from('tabela_precos').insert(faltando);
+    if(error){ toast('Erro: '+error.message,'bad'); return; }
+    await carregarPrecos(true); pintar(); toast(`${faltando.length} exame(s) adicionado(s).`,'ok');
+  };
+
   o.querySelector('#tv-add').onclick = async ()=>{
     const nome=o.querySelector('#tv-nome').value.trim();
     const valor=parseValor(o.querySelector('#tv-valor').value);
@@ -1144,6 +1184,9 @@ function formGuia(rem){
     if(file.size > 20*1024*1024){ const er=o.querySelector('#g-erro'); er.textContent='Arquivo maior que 20 MB.'; er.classList.remove('hide'); return; }
     const legivel = file.type==='application/pdf' || file.type.indexOf('image/')===0;
     if(!legivel){ mostraOcr('Arquivo anexado.'); return; }
+    examesSugeridos = [];                              // zera o que ficou de um upload anterior
+    o.querySelector('#g-nome').value = '';
+    o.querySelector('#g-cod').value = '';
     mostraOcr('Lendo o documento… (a primeira leitura baixa o motor e pode demorar)');
     try{
       const r = await lerGuiaOCR(file, s => mostraOcr('Lendo… '+s));
