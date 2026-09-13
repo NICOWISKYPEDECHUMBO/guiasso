@@ -200,10 +200,13 @@
   .ex-total b{color:#2f7d43}
   .ex-topo{display:flex;align-items:center;gap:12px;margin:8px 0 12px;font-weight:800;font-size:19px;background:#eaf6ee;border:3px solid var(--tinta);border-radius:10px;padding:8px 12px}
   .ex-topo b{color:#2f7d43;font-size:22px}
-  .total-pasta{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;background:#190a2e;
-    border:3px solid var(--tinta);border-radius:12px;padding:12px 14px;font-family:'Bangers',cursive;letter-spacing:1px;
+  .total-pasta{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;background:#190a2e;    border:3px solid var(--tinta);border-radius:12px;padding:12px 14px;font-family:'Bangers',cursive;letter-spacing:1px;
     font-size:22px;color:#c46bff;text-shadow:0 0 6px #b026ff,0 0 14px #a020f0;box-shadow:0 0 12px rgba(176,38,255,.45), var(--sombra-p)}
   .total-pasta b{color:#efb6ff;font-size:27px;text-shadow:0 0 8px #d060ff,0 0 18px #b026ff}
+  .selbar{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:2px}
+  .pasta .checkbox{position:absolute;top:6px;left:6px;z-index:6;width:30px;height:30px;border:3px solid var(--tinta);border-radius:8px;
+    background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#2f7d43;font-size:19px;box-shadow:var(--sombra-p)}
+  .pasta.sel .corpo{outline:4px solid #2f7d43;outline-offset:2px}
 
   /* ---------- carimbos / documento ---------- */
   .paper{position:relative;background:#fffdf5;border:3px solid var(--tinta);border-radius:8px;min-height:210px;overflow:hidden;margin-top:6px;
@@ -354,6 +357,8 @@ const elAuth = $('#auth'), elApp = $('#app'), elConteudo = $('#conteudo'), elMig
 let USER = null;
 let armarioAtual = null;        // objeto armário aberto (ou null)
 let remessaAtual = null;        // objeto remessa aberta (ou null)
+let selMode = false;            // modo de seleção múltipla de guias
+let selSet = new Set();         // ids das guias selecionadas
 
 /* ===== toast ===== */
 function toast(msg, tipo=''){
@@ -556,20 +561,20 @@ $('#busca').addEventListener('input', debounce(onBusca, 300));
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
 
 async function irHome(){
-  armarioAtual = null; remessaAtual = null;
+  armarioAtual = null; remessaAtual = null; selMode=false; selSet.clear();
   $('#busca').value=''; $('#busca').placeholder='Buscar guia por nome ou nº…';
   elMigalha.innerHTML = `<span>🗄️ Armários</span>`;
   await renderArmarios();
 }
 async function abrirArmario(arm){
-  armarioAtual = arm; remessaAtual = null;
+  armarioAtual = arm; remessaAtual = null; selMode=false; selSet.clear();
   $('#busca').value=''; $('#busca').placeholder='Buscar guia neste armário…';
   elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <span>🗂️ ${esc(arm.nome)}</span>`;
   $('#v-home').onclick = irHome;
   await renderRemessas(arm);
 }
 async function abrirRemessa(rem){
-  remessaAtual = rem;
+  remessaAtual = rem; selMode=false; selSet.clear();
   $('#busca').value=''; $('#busca').placeholder='Buscar guia nesta remessa…';
   elMigalha.innerHTML = `<a id="v-home">🗄️ Armários</a> <span>›</span> <a id="v-arm">🗂️ ${esc(armarioAtual?.nome||'')}</a> <span>›</span> <span>📁 ${esc(rem.nome)}</span>
     <button id="print-gaveta" class="btn branco" style="padding:5px 10px;font-size:13px;margin-left:6px">🖨️ Imprimir</button>`;
@@ -822,6 +827,12 @@ function pintarGuias(guias, opts={}){
   if(opts.addPara){
     const somaPasta = guias.reduce((s,g)=> s + ((g.meta && Number(g.meta.total))||0), 0);
     html += `<div class="total-pasta">Total da pasta: <b>${fmtValor(somaPasta)}</b></div>`;
+    html += `<div class="selbar">
+      <button class="btn branco" id="sel-toggle">${selMode?'✕ Cancelar seleção':'☑️ Selecionar'}</button>
+      ${selMode?`<button class="btn branco" id="sel-todas">Todas</button>
+                 <button class="btn branco" id="sel-limpar">Limpar</button>
+                 <button class="btn azul" id="sel-carimbar">🖋️ Carimbar (${selSet.size})</button>`:''}
+    </div>`;
     html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
   }
   if(!guias.length){
@@ -833,7 +844,9 @@ function pintarGuias(guias, opts={}){
     const cs = (g.meta && g.meta.carimbos) || [];
     const ult = cs.slice(-2).reverse();
     const total = (g.meta && Number(g.meta.total)) || 0;
-    html += `<div class="pasta" data-id="${g.id}">
+    const sel = selSet.has(g.id);
+    html += `<div class="pasta ${sel?'sel':''}" data-id="${g.id}">
+      ${selMode?`<div class="checkbox">${sel?'✓':''}</div>`:''}
       <div class="aba"></div>
       <div class="corpo">
         <div class="boneco">${boneco(g.boneco_seed||1)}</div>
@@ -849,9 +862,50 @@ function pintarGuias(guias, opts={}){
     </div>`;
   });
   elConteudo.innerHTML = html;
-  if(opts.addPara){ $('#add-guia').onclick = ()=> formGuia(opts.addPara); }
+  if(opts.addPara){
+    $('#add-guia').onclick = ()=> formGuia(opts.addPara);
+    const st=document.getElementById('sel-toggle'); if(st) st.onclick=()=>{ selMode=!selMode; if(!selMode) selSet.clear(); pintarGuias(guias, opts); };
+    const sa=document.getElementById('sel-todas'); if(sa) sa.onclick=()=>{ guias.forEach(g=>selSet.add(g.id)); pintarGuias(guias, opts); };
+    const sl=document.getElementById('sel-limpar'); if(sl) sl.onclick=()=>{ selSet.clear(); pintarGuias(guias, opts); };
+    const sc=document.getElementById('sel-carimbar'); if(sc) sc.onclick=()=> carimbarLote(guias, opts);
+  }
   elConteudo.querySelectorAll('.pasta').forEach(c=>{
-    c.onclick = ()=> abrirGuia(guias.find(x=>x.id===c.dataset.id));
+    c.onclick = ()=>{
+      const g = guias.find(x=>x.id===c.dataset.id);
+      if(selMode){
+        if(selSet.has(g.id)) selSet.delete(g.id); else selSet.add(g.id);
+        pintarGuias(guias, opts);
+      } else abrirGuia(g);
+    };
+  });
+}
+
+async function carimbarLote(guias, opts){
+  const alvos = guias.filter(g=>selSet.has(g.id));
+  if(!alvos.length){ toast('Selecione ao menos uma guia.'); return; }
+  const paleta = CARIMBOS.map(c=>`<button class="cbtn" data-t="${esc(c.t)}" style="--ink:${c.c}">${esc(c.t)}</button>`).join('');
+  const o = abrirModal(`
+    <h2>Carimbar ${alvos.length} guia(s)</h2>
+    <p style="font-family:'Patrick Hand',cursive;font-size:15px;margin-top:4px">Escolha o carimbo para aplicar em TODAS as selecionadas:</p>
+    <div class="paleta">${paleta}</div>
+    <div id="cl-erro" class="erro hide"></div>
+    <div class="acoes"><button class="btn branco" data-x>Cancelar</button></div>`);
+  o.querySelector('[data-x]').onclick = fecharModal;
+  o.querySelectorAll('.cbtn').forEach(btn => btn.onclick = async ()=>{
+    const t = btn.dataset.t;
+    o.querySelectorAll('.cbtn').forEach(b=>b.disabled=true);
+    btn.innerHTML='<span class="spin"></span>';
+    let ok=0;
+    for(const g of alvos){
+      if(!g.meta) g.meta={}; if(!Array.isArray(g.meta.carimbos)) g.meta.carimbos=[];
+      g.meta.carimbos.push({ t, ts:new Date().toISOString(),
+        x:16+Math.floor(Math.random()*60), y:42+Math.floor(Math.random()*44), r:Math.floor(Math.random()*29)-14 });
+      const { error } = await sb.from('guias').update({ meta:g.meta }).eq('id', g.id);
+      if(!error) ok++;
+    }
+    fecharModal(); selMode=false; selSet.clear();
+    toast(`Carimbado "${t}" em ${ok} guia(s)!`,'ok');
+    recarregar();
   });
 }
 
