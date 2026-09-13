@@ -881,22 +881,19 @@ function _acharNome(texto){
   return m ? m[1].replace(/\s+(Sexo|Data).*/i,'').trim() : '';
 }
 function _acharExames(texto){
-  const i = texto.search(/Exames?\s+(Requisitados|Solicitados)/i);
-  if(i<0) return [];
-  const bloco = texto.slice(i);
+  if(!/exame|requi|solici|siass/i.test(texto)) return [];   // só varre se parece uma guia
   const out=[]; const vistos=new Set();
-  const LIXO = /\b(RG|CPF|nascimento|matr[íi]cula|telefone|ans|cnpj|siape)\b/i;
-  bloco.split(/\n+/).map(s=>s.trim()).forEach(ln=>{
-    if(LIXO.test(ln)) return;                       // linha de RG/CPF/etc. não é exame
+  const LIXO = /\b(RG|CPF|nascimento|matr[íi]cula|telefone|ans|cnpj|siape|autentic|c[óo]digo)\b/i;
+  texto.split(/\n+/).map(s=>s.trim()).forEach(ln=>{
+    if(LIXO.test(ln)) return;                          // linha de RG/CPF/código de autenticidade etc.
     const mc = ln.match(/(?:^|[\s\-–—])(\d{8})(?!\d)/); // código de exame = 8 dígitos colados
     if(!mc) return;
     const codigo = mc[1];
-    // consulta (começa com 10) não precisa de nome; laboratório precisa de nome depois do código
-    const ehConsulta = /^10/.test(codigo);
+    if(vistos.has(codigo)) return;
     let d = ln.slice(ln.indexOf(codigo)+codigo.length).replace(/^[\s\-–—:]+/,'').trim();
-    d = d.replace(/\bObserva[çc][ãa]o.*$/i,'').replace(/[-–—\s]+$/,'').trim();
-    if(!ehConsulta && d.replace(/[^A-Za-zÀ-ú]/g,'').length < 4) return; // sem nome de exame → descarta (evita RG/CPF)
-    if(vistos.has(codigo)) return; vistos.add(codigo);
+    d = d.replace(/\bObser?[nv]?[a'][çc]?[ãa]?o?.*$/i,'').replace(/[-–—\s]+$/,'').trim();
+    if(!/[A-Za-zÀ-ú]{3,}/.test(d)) return;             // precisa ter um "nome" — evita ID/RG/CPF
+    vistos.add(codigo);
     out.push({ codigo, desc:d, raw:ln });
   });
   return out.slice(0,60);
@@ -997,15 +994,42 @@ async function carregarPrecos(force){
 function valorDoExame(desc){
   if(!PRECOS) return null;
   const nd = normEx(desc);
+  if(!nd) return null;
   const busca = fonte => {
-    let melhor=null;
-    for(const p of PRECOS){ if(p.fonte!==fonte) continue; const nk=normEx(p.nome);
-      if(nd===nk || nd.startsWith(nk) || nk.startsWith(nd) || nd.includes(nk)){
-        if(!melhor || nk.length>normEx(melhor.nome).length) melhor=p;   // casa o nome mais específico
-      } }
-    return melhor;
+    let melhor=null, melhorPontos=0;
+    for(const p of PRECOS){
+      if(p.fonte!==fonte) continue;
+      const nk = normEx(p.nome);
+      let pontos = 0;
+      if(nd===nk) pontos = 1000;                                   // igual
+      else if(nd.startsWith(nk) || nk.startsWith(nd)) pontos = 500 + Math.min(nk.length,nd.length);
+      else if(nd.includes(nk) || nk.includes(nd)) pontos = 200 + Math.min(nk.length,nd.length);
+      else {
+        // tolerante ao OCR: quantas letras seguidas em comum (prefixo do nome do exame)
+        let c=0; const m=Math.min(nk.length,nd.length);
+        while(c<m && nk[c]===nd[c]) c++;
+        if(c>=5) pontos = c;                                       // pelo menos 5 letras iguais no começo
+      }
+      if(pontos>melhorPontos){ melhorPontos=pontos; melhor=p; }
+    }
+    return melhorPontos>0 ? melhor : null;
   };
   return busca('GEAP') || busca('CNEM');
+}
+
+/* de-para CÓDIGO do SIASS → palavra-chave do exame na tabela (mais confiável que o nome lido) */
+const COD_EXAME = {
+  '40301605':'COLESTEROLTOTAL', '40302547':'TRIGLICER', '40301630':'CREATININA',
+  '40304361':'HEMOGRAMA', '40311210':'ROTINADEURINA', '40302504':'OXALAC',
+  '40302512':'PIRUV', '40302040':'GLICOSE', '40301990':'GAMAGLUTAMIL',
+  '40303136':'SANGUEOCULTO', '40307018':'HBSAG', '40307026':'ANTIHCV',
+  '40306992':'HBSAC', '40306950':'HBCACIGG', '40306968':'HBCACIGM',
+};
+function precoPorCodigo(codigo){
+  const chave = COD_EXAME[codigo]; if(!chave || !PRECOS) return null;
+  // acha na tabela por palavra-chave; GEAP primeiro, depois CNEM
+  const acha = fonte => PRECOS.find(p=> p.fonte===fonte && normEx(p.nome).includes(chave)) || null;
+  return acha('GEAP') || acha('CNEM');
 }
 
 /* consultas do código que começa com 10 (3 opções) */
@@ -1137,7 +1161,7 @@ function formGuia(rem){
           return p ? { desc:e.desc, codigo:e.codigo, modo:'consulta', id:p.id, nome:p.nome, fonte:p.fonte, valor:Number(p.valor) }
                    : { desc:e.desc, codigo:e.codigo, modo:'consulta', id:null, nome:'', fonte:'', valor:0 };
         }
-        const p = valorDoExame(e.desc);
+        const p = precoPorCodigo(e.codigo) || valorDoExame(e.desc);   // casa pelo CÓDIGO; nome só de reserva
         return p ? { desc:e.desc, codigo:e.codigo, modo:'tabela', id:p.id, nome:p.nome, fonte:p.fonte, valor:Number(p.valor) }
                  : { desc:e.desc, codigo:e.codigo, modo:'tabela', id:null, nome:'', fonte:'', valor:0 };
       });
