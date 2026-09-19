@@ -309,21 +309,27 @@
   .cor-campos{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
   .cor-campos label{display:flex;flex-direction:column;font-weight:800;font-size:13px;gap:3px;flex:1;min-width:170px}
   .cor-campos input,.cor-campos textarea{border:2px solid var(--tinta);border-radius:8px;padding:6px 8px;font-family:inherit;font-weight:600;resize:vertical}
-  .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#12151c}
+  .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff}
   .cor-cover img{display:block;width:100%}
   .cor-desenho{position:relative;container-type:inline-size}
-  .cor-carta-dados{position:absolute;left:83.2%;top:44%;width:12.5%;transform:translate(-50%,-50%) rotate(-9deg);display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 2px;background:#fff;color:#c51624;text-align:center;font-family:'Nunito',sans-serif;font-size:1.65cqw;font-weight:800;line-height:1.15;overflow-wrap:anywhere}
-  .cor-carta-dados strong{font-size:1.85cqw}
-  .cor-faixa{background:#12151c;padding:14px;display:flex;flex-direction:column;align-items:center;gap:9px}
-  .cor-carimbo{display:inline-flex;gap:14px;align-items:center;border:3px solid #ffffff;border-radius:12px;padding:8px 18px;
-    color:#ffffff;font-family:'Bangers',cursive;letter-spacing:1px;transform:rotate(-3deg);
-    text-shadow:0 0 6px #ffffff,0 0 14px #ffffff;box-shadow:0 0 12px rgba(255,255,255,.55),inset 0 0 8px rgba(255,255,255,.25)}
-  .cor-carimbo .cc-l1{font-size:20px}
-  .cor-carimbo .cc-v{font-size:23px}
-  .cor-carimbo .cc-d{font-family:'Nunito',sans-serif;font-weight:800;font-size:11px;letter-spacing:.3px}
-  .cor-carimbo.bate{animation:corbate .38s cubic-bezier(.2,1.4,.4,1)}
-  @keyframes corbate{0%{transform:rotate(-3deg) scale(1.85);opacity:0}55%{opacity:1}100%{transform:rotate(-3deg) scale(1);opacity:1}}
-  .cor-obs-l{color:#cfeede;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;text-align:center}
+  .cor-carta-dados{position:absolute;left:83.2%;top:44%;width:18.75%;transform:translate(-50%,-50%) rotate(-9deg);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 3px;background:#fff;color:#c51624;text-align:center;font-family:'Nunito',sans-serif;font-size:2.475cqw;font-weight:800;line-height:1.15;overflow-wrap:anywhere;border:2px solid #183862;border-radius:4px;max-height:14%;overflow:hidden}
+  .cor-carta-dados span,.cor-carta-dados strong{max-width:100%}
+  .cor-carta-dados strong{font-size:2.775cqw}
+  .cor-agenda{padding:18px;background:#fff;color:#1a1714}
+  .cor-agenda h3{font-family:'Nunito',sans-serif;font-size:19px;font-weight:800;text-align:center;text-decoration:underline;text-underline-offset:5px;margin:0 0 18px}
+  .cor-calendarios{display:flex;gap:14px;flex-wrap:wrap}
+  .cor-cal{flex:1;min-width:230px;border:2px solid #1a1714;border-radius:8px;overflow:hidden;background:#fff}
+  .cor-cal-topo{padding:10px;background:#f3eee4;border-bottom:2px solid #1a1714;text-align:center}
+  .cor-cal-tipo{font-size:12px;font-weight:800;text-transform:uppercase}
+  .cor-cal-data{display:block;font-size:25px;font-weight:800;text-decoration:underline;text-underline-offset:4px;margin:4px 0 8px}
+  .cor-cal-mes{font-size:16px;font-weight:800;text-transform:uppercase}
+  .cor-cal table{width:100%;table-layout:fixed;border-collapse:collapse;margin:8px 0;font-family:'Nunito',sans-serif;text-align:center}
+  .cor-cal th{font-size:11px;height:24px;color:#555}
+  .cor-cal td{height:34px;padding:1px;font-size:14px;font-weight:800}
+  .cor-cal td span{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border:2px solid transparent;border-radius:50%}
+  .cor-cal td .cor-dia-marcado{border:3px solid #d71920;color:#b41118}
+  .cor-cal-vazio{padding:25px 12px;text-align:center;font-size:14px;color:#555}
+  .cor-obs-l{color:#444;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;text-align:center;margin-top:14px}
   .vex-card.mini{padding:7px 10px}
   .vex-card.mini .vex-top{margin-bottom:4px;font-size:14px}
   .vex-card.mini .vex-txt{min-height:42px;font-size:13px;padding:6px}
@@ -1777,50 +1783,62 @@ async function garantirPdf(){
   await _libScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   _libsPdf=true;
 }
+function correioCalendario(valor,titulo){
+  const partes=/^(\d{4})-(\d{2})-(\d{2})$/.exec(valor||'');
+  const vazio='<section class="cor-cal"><div class="cor-cal-topo"><div class="cor-cal-tipo">'+titulo+'</div></div><div class="cor-cal-vazio">Preencha a data acima para exibir o calendário.</div></section>';
+  if(!partes) return vazio;
+  const ano=Number(partes[1]),mes=Number(partes[2]),dia=Number(partes[3]);
+  const data=new Date(0);data.setFullYear(ano,mes-1,dia);data.setHours(12,0,0,0);
+  if(data.getFullYear()!==ano||data.getMonth()!==mes-1||data.getDate()!==dia) return vazio;
+  const primeiro=new Date(data);primeiro.setDate(1);
+  const ultimo=new Date(data);ultimo.setMonth(mes,0);
+  const nomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  let linhas='';
+  const quantidade=Math.ceil((primeiro.getDay()+ultimo.getDate())/7)*7;
+  for(let i=0;i<quantidade;i++){
+    if(i%7===0) linhas+='<tr>';
+    const n=i-primeiro.getDay()+1;
+    linhas+=n<1||n>ultimo.getDate()?'<td></td>':'<td><span'+(n===dia?' class="cor-dia-marcado" aria-label="Data selecionada: '+n+'"':'')+'>'+n+'</span></td>';
+    if(i%7===6) linhas+='</tr>';
+  }
+  return '<section class="cor-cal"><div class="cor-cal-topo"><div class="cor-cal-tipo">'+titulo+'</div><strong class="cor-cal-data">'+partes[3]+'/'+partes[2]+'/'+partes[1]+'</strong><div class="cor-cal-mes">'+nomes[mes-1]+' '+partes[1]+'</div></div><table aria-label="'+titulo+' — '+nomes[mes-1]+' '+ano+'"><thead><tr>'+['DOM','SEG','TER','QUA','QUI','SEX','SÁB'].map(d=>'<th scope="col">'+d+'</th>').join('')+'</tr></thead><tbody>'+linhas+'</tbody></table></section>';
+}
 async function abrirCorreio(rem){
   if(!rem) return;
   const { data:guias } = await sb.from('guias').select('meta').eq('remessa_id',rem.id).eq('arquivada',false);
-  const total=(guias||[]).reduce((s,g)=> s + ((g.meta && Number(g.meta.total))||0), 0);
-  const hoje=new Date(); const p=n=>String(n).padStart(2,'0');
-  const dataHoje=`${p(hoje.getDate())}/${p(hoje.getMonth()+1)}/${hoje.getFullYear()}`;
+  const total=(guias||[]).reduce((s,g)=>s+((g.meta&&Number(g.meta.total))||0),0);
   abrirModal(`
     <h2 class="banger">Remessa para o correio</h2>
     <div class="cor-campos">
-      <label>Data<input id="cor-data" value="${dataHoje}"></label>
+      <label>Data de emissão<input type="date" id="cor-data"></label>
+      <label>Data máxima de faturamento<input type="date" id="cor-faturamento"></label>
       <label>Observação (opcional)<textarea id="cor-obs" rows="2" placeholder="o que você achar necessário…"></textarea></label>
     </div>
     <div id="correio-cover" class="cor-cover">
       <div class="cor-desenho">
         <img src="${IMG_CORREIO}" alt="Dedica Saúde">
-        <div class="cor-carta-dados">
-          <span>REMESSA Nº ${esc(rem.nome||'')}</span>
-          <strong>${fmtValor(total)}</strong>
-        </div>
+        <div class="cor-carta-dados"><span>REMESSA Nº ${esc(rem.nome||'')}</span><strong>${fmtValor(total)}</strong></div>
       </div>
-      <div class="cor-faixa">
-        <div id="cor-carimbo" class="cor-carimbo">
-          <span class="cc-l1">REMESSA Nº ${esc(rem.nome||'')}</span>
-          <span class="cc-v">${fmtValor(total)}</span>
-          <span class="cc-d" id="cc-data">${dataHoje}</span>
-        </div>
+      <div class="cor-agenda">
+        <h3>Calendário de emissão e faturamento</h3>
+        <div class="cor-calendarios" id="cor-calendarios"></div>
         <div class="cor-obs-l" id="cor-obs-l">Comprovante de Remessa · Dedica Saúde</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
-      <button class="btn azul" id="cor-carimbar">🖋️ Carimbar</button>
       <button class="btn" id="cor-pdf">⬇️ Baixar PDF</button>
       <button class="btn branco" onclick="fecharModal()">Fechar</button>
     </div>`);
   const upd=()=>{
-    const d=(document.getElementById('cor-data')||{}).value||'';
-    const o=(document.getElementById('cor-obs')||{}).value||'';
-    const cd=document.getElementById('cc-data'); if(cd) cd.textContent=d;
-    const ol=document.getElementById('cor-obs-l'); if(ol) ol.textContent='Comprovante de Remessa · Dedica Saúde'+(o?(' · Obs: '+o):'');
+    const emissao=document.getElementById('cor-data').value;
+    const faturamento=document.getElementById('cor-faturamento').value;
+    document.getElementById('cor-calendarios').innerHTML=correioCalendario(emissao,'Emissão')+correioCalendario(faturamento,'Faturamento máximo');
+    const obs=document.getElementById('cor-obs').value;
+    document.getElementById('cor-obs-l').textContent='Comprovante de Remessa · Dedica Saúde'+(obs?' · Obs: '+obs:'');
   };
-  const di=document.getElementById('cor-data'); if(di) di.oninput=upd;
-  const oi=document.getElementById('cor-obs'); if(oi) oi.oninput=upd;
-  const cb=document.getElementById('cor-carimbar'); if(cb) cb.onclick=()=>{ const c=document.getElementById('cor-carimbo'); if(!c)return; c.classList.remove('bate'); void c.offsetWidth; c.classList.add('bate'); };
-  const pb=document.getElementById('cor-pdf'); if(pb) pb.onclick=()=> baixarCorreioPdf(rem);
+  ['cor-data','cor-faturamento','cor-obs'].forEach(id=>{document.getElementById(id).oninput=upd;});
+  upd();
+  document.getElementById('cor-pdf').onclick=()=>baixarCorreioPdf(rem);
 }
 async function baixarCorreioPdf(rem){
   const el=document.getElementById('correio-cover'); if(!el) return;
