@@ -309,19 +309,21 @@
   .cor-campos{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
   .cor-campos label{display:flex;flex-direction:column;font-weight:800;font-size:13px;gap:3px;flex:1;min-width:170px}
   .cor-campos input,.cor-campos textarea{border:2px solid var(--tinta);border-radius:8px;padding:6px 8px;font-family:inherit;font-weight:600;resize:vertical}
-  .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff}
+  .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#12151c}
   .cor-cover img{display:block;width:100%}
-  .cor-carimbo{position:absolute;top:11%;right:8%;transform:rotate(-12deg);color:#111;border:4px solid #111;
-    border-radius:12px;padding:8px 16px;text-align:center;background:rgba(255,255,255,.35);
-    box-shadow:inset 0 0 0 2px #111;font-family:'Bangers',cursive;line-height:1}
-  .cor-carimbo .cc-l1{font-size:16px;letter-spacing:3px}
-  .cor-carimbo .cc-n{font-size:23px;margin-top:2px}
-  .cor-carimbo .cc-v{font-size:21px;margin-top:2px}
-  .cor-carimbo .cc-d{font-family:'Nunito',sans-serif;font-size:10px;font-weight:800;margin-top:4px;letter-spacing:.3px}
+  .cor-faixa{background:#12151c;padding:14px;display:flex;flex-direction:column;align-items:center;gap:9px}
+  .cor-carimbo{display:inline-flex;gap:14px;align-items:center;border:3px solid #39ff14;border-radius:12px;padding:8px 18px;
+    color:#39ff14;font-family:'Bangers',cursive;letter-spacing:1px;transform:rotate(-3deg);
+    text-shadow:0 0 6px #39ff14,0 0 14px #2fd60f;box-shadow:0 0 12px rgba(57,255,20,.55),inset 0 0 8px rgba(57,255,20,.25)}
+  .cor-carimbo .cc-l1{font-size:20px}
+  .cor-carimbo .cc-v{font-size:23px}
+  .cor-carimbo .cc-d{font-family:'Nunito',sans-serif;font-weight:800;font-size:11px;letter-spacing:.3px}
   .cor-carimbo.bate{animation:corbate .38s cubic-bezier(.2,1.4,.4,1)}
-  @keyframes corbate{0%{transform:rotate(-12deg) scale(1.85);opacity:0}55%{opacity:1}100%{transform:rotate(-12deg) scale(1);opacity:1}}
-  .cor-legenda{position:absolute;left:0;right:0;bottom:0;background:rgba(15,20,40,.72);color:#fff;
-    font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:6px 12px;display:flex;gap:10px;flex-wrap:wrap}
+  @keyframes corbate{0%{transform:rotate(-3deg) scale(1.85);opacity:0}55%{opacity:1}100%{transform:rotate(-3deg) scale(1);opacity:1}}
+  .cor-obs-l{color:#cfeede;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;text-align:center}
+  .vex-card.mini{padding:7px 10px}
+  .vex-card.mini .vex-top{margin-bottom:4px;font-size:14px}
+  .vex-card.mini .vex-txt{min-height:42px;font-size:13px;padding:6px}
 </style>
 </head>
 <body>
@@ -1786,13 +1788,14 @@ async function abrirCorreio(rem){
     </div>
     <div id="correio-cover" class="cor-cover">
       <img src="${IMG_CORREIO}" alt="Dedica Saúde">
-      <div id="cor-carimbo" class="cor-carimbo">
-        <div class="cc-l1">REMESSA</div>
-        <div class="cc-n">Nº ${esc(rem.nome||'')}</div>
-        <div class="cc-v">${fmtValor(total)}</div>
-        <div class="cc-d" id="cc-data">${dataHoje}</div>
+      <div class="cor-faixa">
+        <div id="cor-carimbo" class="cor-carimbo">
+          <span class="cc-l1">REMESSA Nº ${esc(rem.nome||'')}</span>
+          <span class="cc-v">${fmtValor(total)}</span>
+          <span class="cc-d" id="cc-data">${dataHoje}</span>
+        </div>
+        <div class="cor-obs-l" id="cor-obs-l">Comprovante de Remessa · Dedica Saúde</div>
       </div>
-      <div class="cor-legenda"><b>Comprovante de Remessa · Dedica Saúde</b><span id="cor-obs-l"></span></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
       <button class="btn azul" id="cor-carimbar">🖋️ Carimbar</button>
@@ -1803,7 +1806,7 @@ async function abrirCorreio(rem){
     const d=(document.getElementById('cor-data')||{}).value||'';
     const o=(document.getElementById('cor-obs')||{}).value||'';
     const cd=document.getElementById('cc-data'); if(cd) cd.textContent=d;
-    const ol=document.getElementById('cor-obs-l'); if(ol) ol.textContent=o?(' · Obs: '+o):'';
+    const ol=document.getElementById('cor-obs-l'); if(ol) ol.textContent='Comprovante de Remessa · Dedica Saúde'+(o?(' · Obs: '+o):'');
   };
   const di=document.getElementById('cor-data'); if(di) di.oninput=upd;
   const oi=document.getElementById('cor-obs'); if(oi) oi.oninput=upd;
@@ -1831,16 +1834,16 @@ async function verificarSemExames(rem){
   const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false);
   if(error){ toast('Erro: '+error.message,'bad'); return; }
   const ordenadas=(guias||[]);
-  const semex=ordenadas.filter(g=> (g.meta && g.meta.ocr_falhou) || !(g.meta && Array.isArray(g.meta.exames) && g.meta.exames.length));
+  const semex=ordenadas.filter(g=> !(g.meta && Number(g.meta.total)>0));
   _semExMap={}; semex.forEach(g=>_semExMap[g.id]=g);
-  let html=`<h2 class="banger">Guias com problema (${semex.length})</h2>`;
-  if(!semex.length){ html+=`<p style="font-weight:700">Todas as guias já têm exames lidos. 🎉</p>`; }
+  let html=`<h2 class="banger">Guias sem valor (${semex.length})</h2>`;
+  if(!semex.length){ html+=`<p style="font-weight:700">Todas as guias já têm valor. 🎉</p>`; }
   else{
-    html+=`<p style="margin:2px 0 10px">Aqui estão as guias <b>que o OCR não conseguiu ler</b> (ou sem exame). Abra o PDF, digite os exames (um por linha) e salve. Ex.: <b>40301605 - Colesterol total</b></p>`;
+    html+=`<p style="margin:2px 0 10px">Guias que vieram <b>sem valor</b> (o OCR não leu, ou sem preço). Clique em <b>PDF</b> pra ver, digite os exames (um por linha) e salve. Ex.: <b>40301605 - Colesterol total</b></p>`;
     html+=`<div class="vex-lista">`;
     semex.forEach(g=>{
-      const flag = (g.meta&&g.meta.ocr_falhou) ? `<span class="tag" style="background:#f3b0b0">OCR não leu</span>` : `<span class="tag" style="background:#eee">sem exame</span>`;
-      html+=`<div class="vex-card" id="vex-${g.id}">
+      const flag = (g.meta&&g.meta.ocr_falhou) ? `<span class="tag" style="background:#f3b0b0">OCR não leu</span>` : `<span class="tag" style="background:#ffe0a3">sem valor</span>`;
+      html+=`<div class="vex-card mini" id="vex-${g.id}">
         <div class="vex-top"><b>${esc(g.nome||'Guia')}</b> ${flag}
           ${g.arquivo_path?`<button class="btn azul" onclick="vexPdf('${g.id}')">📄 PDF</button>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
         </div>
