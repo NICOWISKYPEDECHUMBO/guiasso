@@ -309,27 +309,28 @@
   .cor-campos{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
   .cor-campos label{display:flex;flex-direction:column;font-weight:800;font-size:13px;gap:3px;flex:1;min-width:170px}
   .cor-campos input,.cor-campos textarea{border:2px solid var(--tinta);border-radius:8px;padding:6px 8px;font-family:inherit;font-weight:600;resize:vertical}
-  .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff}
+  .cor-cover{position:relative;width:100%;max-width:1000px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff}
   .cor-cover img{display:block;width:100%}
   .cor-desenho{position:relative;container-type:inline-size}
-  .cor-carta-dados{position:absolute;left:83.2%;top:44%;width:18.75%;transform:translate(-50%,-50%) rotate(-9deg);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 3px;background:#fff;color:#c51624;text-align:center;font-family:'Nunito',sans-serif;font-size:2.475cqw;font-weight:800;line-height:1.15;overflow-wrap:anywhere;border:2px solid #183862;border-radius:4px;max-height:14%;overflow:hidden}
-  .cor-carta-dados span,.cor-carta-dados strong{max-width:100%}
-  .cor-carta-dados strong{font-size:2.775cqw}
-  .cor-agenda{padding:18px;background:#fff;color:#1a1714}
-  .cor-agenda h3{font-family:'Nunito',sans-serif;font-size:19px;font-weight:800;text-align:center;text-decoration:underline;text-underline-offset:5px;margin:0 0 18px}
-  .cor-calendarios{display:flex;gap:14px;flex-wrap:wrap}
-  .cor-cal{flex:1;min-width:230px;border:2px solid #1a1714;border-radius:8px;overflow:hidden;background:#fff}
-  .cor-cal-topo{padding:10px;background:#f3eee4;border-bottom:2px solid #1a1714;text-align:center}
-  .cor-cal-tipo{font-size:12px;font-weight:800;text-transform:uppercase}
-  .cor-cal-data{display:block;font-size:25px;font-weight:800;text-decoration:underline;text-underline-offset:4px;margin:4px 0 8px}
-  .cor-cal-mes{font-size:16px;font-weight:800;text-transform:uppercase}
-  .cor-cal table{width:100%;table-layout:fixed;border-collapse:collapse;margin:8px 0;font-family:'Nunito',sans-serif;text-align:center}
-  .cor-cal th{font-size:11px;height:24px;color:#555}
-  .cor-cal td{height:34px;padding:1px;font-size:14px;font-weight:800}
-  .cor-cal td span{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border:2px solid transparent;border-radius:50%}
-  .cor-cal td .cor-dia-marcado{border:3px solid #d71920;color:#b41118}
-  .cor-cal-vazio{padding:25px 12px;text-align:center;font-size:14px;color:#555}
-  .cor-obs-l{color:#444;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;text-align:center;margin-top:14px}
+  .cor-carta-dados{position:absolute;left:83.2%;top:44%;width:18.75%;transform:translate(-50%,-50%) rotate(-9deg);display:flex;flex-direction:column;align-items:center;gap:.3cqw;padding:.55cqw .3cqw;background:#fff;color:#c51624;text-align:center;font-family:'Nunito',sans-serif;font-weight:800;line-height:1.1;border:2px solid #183862;border-radius:4px;box-sizing:border-box}
+  .cor-carta-dados span{display:block;white-space:nowrap;font-size:1.55cqw}
+  .cor-carta-dados .cor-rem-num{font-size:2.2cqw}
+  .cor-carta-dados strong{display:block;white-space:nowrap;font-size:2.4cqw}
+  .cor-agenda{position:absolute;left:2%;right:2%;bottom:1.5%;color:#1a1714}
+  .cor-calendarios{display:flex;justify-content:space-between;align-items:flex-end;gap:2%}
+  .cor-cal{width:29%;min-width:0;border:2px solid #1a1714;border-radius:6px;overflow:hidden;background:#fff}
+  .cor-cal-topo{padding:.5cqw;background:#fff4dc;border-bottom:1px solid #1a1714;text-align:center}
+  .cor-cal-tipo{font-size:1.25cqw;font-weight:800;text-transform:uppercase}
+  .cor-cal-data{display:block;font-size:2.3cqw;font-weight:800;text-decoration:underline;text-underline-offset:.3cqw;margin:.3cqw 0 .5cqw}
+  .cor-cal-mes{font-size:1.3cqw;font-weight:800;text-transform:uppercase}
+  .cor-cal table{width:100%;table-layout:fixed;border-collapse:collapse;margin:.4cqw 0;font-family:'Nunito',sans-serif;text-align:center}
+  .cor-cal th{font-size:1.1cqw;height:1.4cqw;color:#444}
+  .cor-cal td{height:2.2cqw;padding:0;font-size:1.4cqw;font-weight:800}
+  .cor-cal td span{display:inline-flex;width:2.2cqw;height:2.2cqw;align-items:center;justify-content:center;border:2px solid transparent;border-radius:50%}
+  .cor-cal td .cor-dia-marcado{border:2px solid #d71920;color:#b41118}
+  .cor-cal-vazio{padding:2cqw 1cqw;text-align:center;font-size:1.4cqw;color:#444}
+  .cor-obs-l{color:#444;font-family:'Nunito',sans-serif;font-weight:700;font-size:12px;text-align:center;padding:6px;background:#fff}
+  .cor-obs-l:empty{display:none}
   .vex-card.mini{padding:7px 10px}
   .vex-card.mini .vex-top{margin-bottom:4px;font-size:14px}
   .vex-card.mini .vex-txt{min-height:42px;font-size:13px;padding:6px}
@@ -1817,13 +1818,12 @@ async function abrirCorreio(rem){
     <div id="correio-cover" class="cor-cover">
       <div class="cor-desenho">
         <img src="${IMG_CORREIO}" alt="Dedica Saúde">
-        <div class="cor-carta-dados"><span>REMESSA Nº ${esc(rem.nome||'')}</span><strong>${fmtValor(total)}</strong></div>
+        <div class="cor-carta-dados"><span>REMESSA Nº</span><span class="cor-rem-num">${esc(rem.nome||'')}</span><strong>${fmtValor(total)}</strong></div>
+        <div class="cor-agenda">
+          <div class="cor-calendarios" id="cor-calendarios"></div>
+        </div>
       </div>
-      <div class="cor-agenda">
-        <h3>Calendário de emissão e faturamento</h3>
-        <div class="cor-calendarios" id="cor-calendarios"></div>
-        <div class="cor-obs-l" id="cor-obs-l">Comprovante de Remessa · Dedica Saúde</div>
-      </div>
+      <div class="cor-obs-l" id="cor-obs-l"></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
       <button class="btn" id="cor-pdf">⬇️ Baixar PDF</button>
@@ -1834,8 +1834,10 @@ async function abrirCorreio(rem){
     const faturamento=document.getElementById('cor-faturamento').value;
     document.getElementById('cor-calendarios').innerHTML=correioCalendario(emissao,'Emissão')+correioCalendario(faturamento,'Faturamento máximo');
     const obs=document.getElementById('cor-obs').value;
-    document.getElementById('cor-obs-l').textContent='Comprovante de Remessa · Dedica Saúde'+(obs?' · Obs: '+obs:'');
+    document.getElementById('cor-obs-l').textContent=obs?'Obs: '+obs:'';
   };
+  const modalCorreio=document.getElementById('correio-cover').closest('.modal');
+  if(modalCorreio) modalCorreio.style.maxWidth='1040px';
   ['cor-data','cor-faturamento','cor-obs'].forEach(id=>{document.getElementById(id).oninput=upd;});
   upd();
   document.getElementById('cor-pdf').onclick=()=>baixarCorreioPdf(rem);
