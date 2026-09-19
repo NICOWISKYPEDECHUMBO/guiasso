@@ -311,9 +311,9 @@
   .cor-campos input,.cor-campos textarea{border:2px solid var(--tinta);border-radius:8px;padding:6px 8px;font-family:inherit;font-weight:600;resize:vertical}
   .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#fff}
   .cor-cover img{display:block;width:100%}
-  .cor-carimbo{position:absolute;top:11%;right:8%;transform:rotate(-12deg);color:#c0243a;border:4px solid #c0243a;
-    border-radius:12px;padding:8px 16px;text-align:center;background:rgba(255,255,255,.12);
-    box-shadow:inset 0 0 0 2px #c0243a;font-family:'Bangers',cursive;line-height:1}
+  .cor-carimbo{position:absolute;top:11%;right:8%;transform:rotate(-12deg);color:#111;border:4px solid #111;
+    border-radius:12px;padding:8px 16px;text-align:center;background:rgba(255,255,255,.35);
+    box-shadow:inset 0 0 0 2px #111;font-family:'Bangers',cursive;line-height:1}
   .cor-carimbo .cc-l1{font-size:16px;letter-spacing:3px}
   .cor-carimbo .cc-n{font-size:23px;margin-top:2px}
   .cor-carimbo .cc-v{font-size:21px;margin-top:2px}
@@ -872,7 +872,7 @@ function pintarGuias(guias, opts={}){
     </div>`;
     html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
     html += `<button class="add" id="calc-guias" style="background:#d7f0dd"><span>🧮</span>Calcular guias</button>`;
-    html += `<button class="add" id="ver-semex" style="background:#ffe6b3"><span>🔎</span>Verificar sem exames</button>`;
+    html += `<button class="add" id="ver-semex" style="background:#ffe6b3"><span>🔎</span>Verificar problemas</button>`;
     html += `<button class="add" id="btn-correio" style="background:#fff2c2"><span>📮</span>Correio (remessa)</button>`;
   }
   if(!guias.length){
@@ -1831,16 +1831,17 @@ async function verificarSemExames(rem){
   const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false);
   if(error){ toast('Erro: '+error.message,'bad'); return; }
   const ordenadas=(guias||[]);
-  const semex=ordenadas.filter(g=> !(g.meta && Array.isArray(g.meta.exames) && g.meta.exames.length));
+  const semex=ordenadas.filter(g=> (g.meta && g.meta.ocr_falhou) || !(g.meta && Array.isArray(g.meta.exames) && g.meta.exames.length));
   _semExMap={}; semex.forEach(g=>_semExMap[g.id]=g);
-  let html=`<h2 class="banger">Guias sem exames (${semex.length})</h2>`;
-  if(!semex.length){ html+=`<p style="font-weight:700">Todas as guias já têm exames. 🎉</p>`; }
+  let html=`<h2 class="banger">Guias com problema (${semex.length})</h2>`;
+  if(!semex.length){ html+=`<p style="font-weight:700">Todas as guias já têm exames lidos. 🎉</p>`; }
   else{
-    html+=`<p style="margin:2px 0 10px">Abra o PDF, digite os exames (um por linha) e salve. Ex.: <b>40301605 - Colesterol total</b></p>`;
+    html+=`<p style="margin:2px 0 10px">Aqui estão as guias <b>que o OCR não conseguiu ler</b> (ou sem exame). Abra o PDF, digite os exames (um por linha) e salve. Ex.: <b>40301605 - Colesterol total</b></p>`;
     html+=`<div class="vex-lista">`;
     semex.forEach(g=>{
+      const flag = (g.meta&&g.meta.ocr_falhou) ? `<span class="tag" style="background:#f3b0b0">OCR não leu</span>` : `<span class="tag" style="background:#eee">sem exame</span>`;
       html+=`<div class="vex-card" id="vex-${g.id}">
-        <div class="vex-top"><b>${esc(g.nome||'Guia')}</b>
+        <div class="vex-top"><b>${esc(g.nome||'Guia')}</b> ${flag}
           ${g.arquivo_path?`<button class="btn azul" onclick="vexPdf('${g.id}')">📄 PDF</button>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
         </div>
         <textarea class="vex-txt" id="vext-${g.id}" placeholder="Um exame por linha:\n40301605 - Colesterol total\n40302547 - Triglicerídeos"></textarea>
@@ -1867,7 +1868,7 @@ async function vexSalvar(id){
   await carregarPrecos();
   const exames=brutos.map(_mapExameImport);
   const total=exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
-  const meta=Object.assign({}, g.meta||{}, { exames, total });
+  const meta=Object.assign({}, g.meta||{}, { exames, total, ocr_falhou:false });
   const { error } = await sb.from('guias').update({meta}).eq('id',id);
   if(error){ toast('Erro: '+error.message,'bad'); return; }
   g.meta=meta;
@@ -1893,7 +1894,7 @@ async function calcularGaveta(rem){
   let feitas=0, semExame=0;
   for(let i=0;i<(guias||[]).length;i++){
     const g=guias[i]; status(`Lendo ${i+1} de ${guias.length}…  (${g.nome||'guia'})`);
-    let brutos=[], nomeOCR='', codOCR='';
+    let brutos=[], nomeOCR='', codOCR='', ocrOk=false;
     // 1) OCR do PDF anexado (do jeito do antigo)
     if(g.arquivo_path){
       try{
@@ -1904,18 +1905,25 @@ async function calcularGaveta(rem){
           const r=await lerGuiaOCR(file);
           nomeOCR=r.nome||''; codOCR=r.codigo||'';
           brutos=(r.exames||[]).map(e=>({codigo:e.codigo,desc:e.desc,raw:e.raw}));
+          if(brutos.length) ocrOk=true;
         }
       }catch(err){ console.warn('ocr', err); }
     }
     // 2) se o OCR não achou, usa os exames que o novo já leu
+    let usouReserva=false;
     if(!brutos.length){
       const oid=g.meta&&g.meta.origem_guia_id;
-      if(oid && mapNovo[oid]) brutos=_examesDoTexto(mapNovo[oid]);
+      if(oid && mapNovo[oid]){ brutos=_examesDoTexto(mapNovo[oid]); if(brutos.length) usouReserva=true; }
     }
-    if(!brutos.length){ semExame++; continue; }   // NÃO zera
+    if(!brutos.length){
+      // marca que o OCR falhou (pra listar depois) — NÃO zera nada
+      const meta=Object.assign({}, g.meta||{}, { ocr_falhou:true });
+      await sb.from('guias').update({meta}).eq('id',g.id);
+      g.meta=meta; semExame++; continue;
+    }
     const exames=brutos.map(_mapExameImport);
     const total=exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
-    const meta=Object.assign({}, g.meta||{}, { exames, total });
+    const meta=Object.assign({}, g.meta||{}, { exames, total, ocr_falhou:false, ocr_reserva:usouReserva });
     const upd={ meta };
     if(nomeOCR && !g.nome) upd.nome=nomeOCR;
     if(codOCR && !g.codigo_siass) upd.codigo_siass=codOCR;
@@ -1923,7 +1931,7 @@ async function calcularGaveta(rem){
     feitas++;
   }
   fecharModal();
-  toast(`${feitas} calculada(s)${semExame?` · ${semExame} sem exame lido`:''}.`,'ok');
+  toast(`${feitas} calculada(s)${semExame?` · ${semExame} o OCR não leu (veja em “Verificar problemas”)`:''}.`,'ok');
   await renderGuias(rem);
 }
 async function sgAbrirGuia(g){
