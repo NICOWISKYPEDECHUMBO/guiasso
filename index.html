@@ -311,6 +311,9 @@
   .cor-campos input,.cor-campos textarea{border:2px solid var(--tinta);border-radius:8px;padding:6px 8px;font-family:inherit;font-weight:600;resize:vertical}
   .cor-cover{position:relative;width:100%;max-width:760px;margin:8px auto 0;border:3px solid var(--tinta);border-radius:12px;overflow:hidden;background:#12151c}
   .cor-cover img{display:block;width:100%}
+  .cor-desenho{position:relative;container-type:inline-size}
+  .cor-carta-dados{position:absolute;left:83.2%;top:44%;width:12.5%;transform:translate(-50%,-50%) rotate(-9deg);display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 2px;background:#fff;color:#c51624;text-align:center;font-family:'Nunito',sans-serif;font-size:1.65cqw;font-weight:800;line-height:1.15;overflow-wrap:anywhere}
+  .cor-carta-dados strong{font-size:1.85cqw}
   .cor-faixa{background:#12151c;padding:14px;display:flex;flex-direction:column;align-items:center;gap:9px}
   .cor-carimbo{display:inline-flex;gap:14px;align-items:center;border:3px solid #ffffff;border-radius:12px;padding:8px 18px;
     color:#ffffff;font-family:'Bangers',cursive;letter-spacing:1px;transform:rotate(-3deg);
@@ -1787,7 +1790,13 @@ async function abrirCorreio(rem){
       <label>Observação (opcional)<textarea id="cor-obs" rows="2" placeholder="o que você achar necessário…"></textarea></label>
     </div>
     <div id="correio-cover" class="cor-cover">
-      <img src="${IMG_CORREIO}" alt="Dedica Saúde">
+      <div class="cor-desenho">
+        <img src="${IMG_CORREIO}" alt="Dedica Saúde">
+        <div class="cor-carta-dados">
+          <span>REMESSA Nº ${esc(rem.nome||'')}</span>
+          <strong>${fmtValor(total)}</strong>
+        </div>
+      </div>
       <div class="cor-faixa">
         <div id="cor-carimbo" class="cor-carimbo">
           <span class="cc-l1">REMESSA Nº ${esc(rem.nome||'')}</span>
