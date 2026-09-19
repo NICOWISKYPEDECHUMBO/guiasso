@@ -1634,7 +1634,7 @@ async function sgAbrirMala(mala){
   if(!mala) return;
   _sgMala = mala;
   const body=document.getElementById('sg-body'); body.innerHTML=`<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
-  document.getElementById('sg-nav').innerHTML = `<button class="btn branco" onclick="abrirSistemaGuias()">← Malas</button> <b>${esc(mala.nome||'Mala')}</b> <span class="sg-tagro">só leitura</span>`;
+  document.getElementById('sg-nav').innerHTML = `<button class="btn branco" onclick="abrirSistemaGuias()">← Malas</button> <b>${esc(mala.nome||'Mala')}</b> <button class="btn azul" onclick="sgImportarMala(_sgMala)">⬇️ Importar p/ o arquivo</button>`;
   const { data:pastas } = await sb.from('mala_pastas').select('id,nome').eq('mala_id',mala.id);
   const pnome={}; (pastas||[]).forEach(p=>pnome[p.id]=p.nome);
   const { data:guias, error } = await sb.from('mala_guias').select('*').eq('mala_id',mala.id).order('ordem',{ascending:true}).order('created_at',{ascending:true});
@@ -1658,6 +1658,76 @@ async function sgAbrirMala(mala){
   html+='</div>';
   body.innerHTML=html;
   body.querySelectorAll('[data-guia]').forEach(c=> c.onclick=()=> sgAbrirGuia((guias||[]).find(g=>g.id===c.dataset.guia)) );
+}
+function _mapExameImport(e){
+  const consulta=/^10/.test(e.codigo||'');
+  if(consulta){
+    const low=(e.raw||e.desc||'').toLowerCase();
+    const chave=/oftalmol|acuidade|visual/.test(low)?'OFTALMOLOG':/ginecol/.test(low)?'GINECOLOG':/cl[ií]nic/.test(low)?'CLINICO':'';
+    const p=chave?precoPorChave(chave):null;
+    return p?{desc:e.desc,codigo:e.codigo,modo:'consulta',id:p.id,nome:p.nome,fonte:p.fonte,valor:Number(p.valor)}
+            :{desc:e.desc,codigo:e.codigo,modo:'consulta',id:null,nome:'',fonte:'',valor:0};
+  }
+  const p=precoPorCodigo(e.codigo)||valorDoExame(e.desc);
+  return p?{desc:e.desc,codigo:e.codigo,modo:'tabela',id:p.id,nome:p.nome,fonte:p.fonte,valor:Number(p.valor)}
+          :{desc:e.desc,codigo:e.codigo,modo:'tabela',id:null,nome:'',fonte:'',valor:0};
+}
+async function sgImportarMala(mala){
+  if(!mala) return;
+  if(!confirm(`Importar a mala "${mala.nome}" para o Arquivo de Guias?\n\nCria uma gaveta e as guias aqui (com PDF, OCR e soma). Não apaga nem altera nada do que já existe.`)) return;
+  const body=document.getElementById('sg-body');
+  const info = t => { if(body) body.innerHTML=`<div class="vazio"><div class="balao">${esc(t)}</div></div>`; };
+  info('Preparando…');
+  let arm;
+  { const {data:arms}=await sb.from('armarios').select('*').eq('arquivada',false);
+    arm=(arms||[]).find(a=>a.nome==='SISTEMA DE GUIAS');
+    if(!arm){ const {data,error}=await sb.from('armarios').insert({nome:'SISTEMA DE GUIAS', cor:'#4a90d9'}).select().single(); if(error){toast('Erro: '+error.message,'bad');return;} arm=data; } }
+  let rem;
+  { const {data:rs}=await sb.from('remessas').select('*').eq('armario_id',arm.id).eq('arquivada',false);
+    rem=(rs||[]).find(r=>r.nome===mala.nome);
+    if(!rem){ const {data,error}=await sb.from('remessas').insert({nome:mala.nome, cor:mala.cor||'#4a90d9', armario_id:arm.id}).select().single(); if(error){toast('Erro: '+error.message,'bad');return;} rem=data; } }
+  const {data:jaGuias}=await sb.from('guias').select('id,meta').eq('remessa_id',rem.id);
+  const jaOrig=new Set(); (jaGuias||[]).forEach(x=>{ const o=x.meta&&x.meta.origem_guia_id; if(o) jaOrig.add(o); });
+  const {data:novas}=await sb.from('mala_guias').select('*').eq('mala_id',mala.id).order('ordem',{ascending:true}).order('created_at',{ascending:true});
+  const pend=(novas||[]).filter(g=>!jaOrig.has(g.id));
+  if(!pend.length){ toast('Nada novo pra importar (já estava tudo lá).','ok'); armarioAtual=arm; sgFechar(); await abrirRemessa(rem); return; }
+  await carregarPrecos();
+  let ok=0, falhas=0;
+  for(let i=0;i<pend.length;i++){
+    const g=pend[i];
+    info(`Importando ${i+1} de ${pend.length}… (lendo PDF)`);
+    try{
+      let nome=g.nome||'Guia', codigo=null, examesSug=[], file=null;
+      if(g.arquivo_path){
+        const {data:blob}=await sb.storage.from('malas').download(g.arquivo_path);
+        if(blob){
+          const ext=(g.arquivo_path.split('.').pop()||'pdf');
+          file=new File([blob], `${nome.replace(/[^\w.\-]+/g,'_')}.${ext}`, {type:blob.type||'application/pdf'});
+          try{
+            const r=await lerGuiaOCR(file);
+            if(r.nome) nome=r.nome;
+            if(r.codigo) codigo=r.codigo;
+            examesSug=(r.exames||[]).map(_mapExameImport);
+          }catch(_){}
+        }
+      }
+      const total=examesSug.reduce((s,x)=>s+(Number(x.valor)||0),0);
+      const seed=(Math.random()*1000000)|0;
+      const {data:novo,error}=await sb.from('guias').insert({
+        remessa_id:rem.id, nome, codigo_siass:codigo||null, boneco_seed:seed,
+        meta:{ exames:examesSug, total, origem_mala_id:mala.id, origem_guia_id:g.id }
+      }).select().single();
+      if(error) throw error;
+      if(file){
+        const path=caminho(rem.id, novo.id, file.name);
+        const up=await sb.storage.from(BUCKET).upload(path, file, {upsert:true, contentType:file.type||undefined});
+        if(!up.error) await sb.from('guias').update({arquivo_path:path}).eq('id',novo.id);
+      }
+      ok++;
+    }catch(err){ console.warn('import', err); falhas++; }
+  }
+  toast(`${ok} guia(s) importada(s)${falhas?` · ${falhas} com erro`:''}.`,'ok');
+  armarioAtual=arm; sgFechar(); await abrirRemessa(rem);
 }
 async function sgAbrirGuia(g){
   if(!g) return;
