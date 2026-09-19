@@ -316,8 +316,11 @@
   .cor-carta-dados span{display:block;white-space:nowrap;font-size:1.55cqw}
   .cor-carta-dados .cor-rem-num{font-size:2.2cqw}
   .cor-carta-dados strong{display:block;white-space:nowrap;font-size:2.4cqw}
-  .cor-agenda{position:absolute;left:2%;right:2%;bottom:1.5%;color:#1a1714}
-  .cor-calendarios{display:flex;justify-content:space-between;align-items:flex-end;gap:2%}
+  .cor-agenda{position:absolute;inset:0;color:#1a1714;pointer-events:none}
+  .cor-calendarios{position:absolute;inset:0}
+  .cor-calendarios .cor-cal{position:absolute;width:20%;transform-origin:center}
+  .cor-calendarios .cor-cal:first-child{left:20%;top:18%;transform:rotate(-4deg)}
+  .cor-calendarios .cor-cal:last-child{left:36%;top:49%;transform:rotate(-2deg)}
   .cor-cal{width:29%;min-width:0;border:2px solid #1a1714;border-radius:6px;overflow:hidden;background:#fff}
   .cor-cal-topo{padding:.5cqw;background:#fff4dc;border-bottom:1px solid #1a1714;text-align:center}
   .cor-cal-tipo{font-size:1.25cqw;font-weight:800;text-transform:uppercase}
