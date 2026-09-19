@@ -847,6 +847,7 @@ function pintarGuias(guias, opts={}){
                  <button class="btn azul" id="sel-carimbar">🖋️ Carimbar (${selSet.size})</button>`:''}
     </div>`;
     html += `<button class="add" id="add-guia"><span>＋</span>Nova guia</button>`;
+    html += `<button class="add" id="calc-guias" style="background:#d7f0dd"><span>🧮</span>Calcular guias</button>`;
   }
   if(!guias.length){
     html += `<div class="vazio"><div class="balao">${opts.buscaVazia
@@ -877,6 +878,7 @@ function pintarGuias(guias, opts={}){
   elConteudo.innerHTML = html;
   if(opts.addPara){
     $('#add-guia').onclick = ()=> formGuia(opts.addPara);
+    const cg=document.getElementById('calc-guias'); if(cg) cg.onclick=()=> calcularGaveta(opts.addPara);
     const st=document.getElementById('sel-toggle'); if(st) st.onclick=()=>{ selMode=!selMode; if(!selMode) selSet.clear(); pintarGuias(guias, opts); };
     const sa=document.getElementById('sel-todas'); if(sa) sa.onclick=()=>{ guias.forEach(g=>selSet.add(g.id)); pintarGuias(guias, opts); };
     const sl=document.getElementById('sel-limpar'); if(sl) sl.onclick=()=>{ selSet.clear(); pintarGuias(guias, opts); };
@@ -1728,6 +1730,40 @@ async function sgImportarMala(mala){
   }
   toast(`${ok} guia(s) importada(s)${falhas?` · ${falhas} com erro`:''}.`,'ok');
   armarioAtual=arm; sgFechar(); await abrirRemessa(rem);
+}
+async function calcularGaveta(rem){
+  if(!rem) return;
+  if(!confirm('Calcular as guias desta gaveta?\n\nLê o PDF de cada guia (OCR), casa os exames com a tabela de preços e atualiza o total. Não apaga nada — guias que não der pra ler ficam como estão.')) return;
+  const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false);
+  if(error){ toast('Erro: '+error.message,'bad'); return; }
+  await carregarPrecos();
+  const o = abrirModal(`<h2>Calculando…</h2><p id="calc-status" style="font-weight:700">Preparando…</p>`);
+  const status = t => { const s=o.querySelector('#calc-status'); if(s) s.textContent=t; };
+  let feitas=0, semArq=0, semExame=0, falhas=0;
+  for(let i=0;i<(guias||[]).length;i++){
+    const g=guias[i];
+    status(`Lendo ${i+1} de ${guias.length}…  (${g.nome||'guia'})`);
+    if(!g.arquivo_path){ semArq++; continue; }
+    try{
+      const { data:blob } = await sb.storage.from(BUCKET).download(g.arquivo_path);
+      if(!blob){ falhas++; continue; }
+      const ext=(g.arquivo_path.split('.').pop()||'pdf');
+      const file=new File([blob], `g.${ext}`, {type:blob.type||'application/pdf'});
+      const r=await lerGuiaOCR(file);
+      const exames=(r.exames||[]).map(_mapExameImport);
+      if(!exames.length){ semExame++; continue; }        // NÃO zera: mantém o que já tinha
+      const total=exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
+      const meta=Object.assign({}, g.meta||{}, { exames, total });
+      const upd={ meta };
+      if(r.nome && !g.nome) upd.nome=r.nome;
+      if(r.codigo && !g.codigo_siass) upd.codigo_siass=r.codigo;
+      await sb.from('guias').update(upd).eq('id',g.id);
+      feitas++;
+    }catch(err){ console.warn('calc', err); falhas++; }
+  }
+  fecharModal();
+  toast(`${feitas} calculada(s)${semArq?` · ${semArq} sem arquivo`:''}${semExame?` · ${semExame} sem exame lido`:''}${falhas?` · ${falhas} com erro`:''}.`,'ok');
+  await renderGuias(rem);
 }
 async function sgAbrirGuia(g){
   if(!g) return;
