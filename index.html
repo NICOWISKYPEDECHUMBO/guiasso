@@ -287,6 +287,17 @@
   #auth p.sub{font-family:'Patrick Hand',cursive;font-size:16px;margin-bottom:6px}
   .spin{display:inline-block;width:16px;height:16px;border:3px solid #fff;border-top-color:transparent;border-radius:50%;animation:g .7s linear infinite}
   @keyframes g{to{transform:rotate(360deg)}}
+  /* ===== Visualizador só-leitura do Sistema de Guias ===== */
+  #sisguias{position:fixed;inset:0;z-index:5000;background:rgba(26,23,20,.55);display:flex;align-items:stretch;justify-content:center;padding:14px}
+  #sisguias .sg-box{background:var(--verde);border:3px solid var(--tinta);border-radius:16px;box-shadow:var(--sombra);width:100%;max-width:1100px;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+  #sisguias .sg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:3px solid var(--tinta);background:var(--amarelo2);flex-wrap:wrap}
+  #sisguias .sg-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  #sisguias .sg-body{padding:16px;overflow:auto}
+  #sisguias .sg-tagro{display:inline-block;background:#d7f0dd;border:2px solid var(--tinta);border-radius:8px;padding:2px 8px;font-weight:800;font-size:12px}
+  #sisguias .sg-cabg{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  #sisguias .sg-cabg .boneco{border:3px solid var(--tinta);border-radius:12px;overflow:hidden;box-shadow:var(--sombra-p)}
+  #sisguias .sg-detalhe{background:var(--creme);border:3px solid var(--tinta);border-radius:14px;box-shadow:var(--sombra);padding:16px;max-width:760px;margin:0 auto}
+  #sisguias .sg-exames{background:#fff;border:2px dashed var(--tinta);border-radius:10px;padding:12px 14px;white-space:pre-wrap;font-family:'Nunito',sans-serif;line-height:1.5}
 </style>
 </head>
 <body>
@@ -320,6 +331,7 @@
     <div class="logo banger">ARQUIVO DE GUIAS</div>
     <div class="quem">
       <span class="email" id="u-email"></span>
+      <button id="u-sistema" class="btn branco" style="padding:6px 12px">📥 Sistema de Guias</button>
       <button id="u-valores" class="btn branco" style="padding:6px 12px">💲 Valores</button>
       <button id="u-sair" class="btn branco" style="padding:6px 12px">Sair</button>
     </div>
@@ -495,6 +507,7 @@ $('#a-criar').onclick = async ()=>{
 };
 $('#u-sair').onclick = async ()=>{ await sb.auth.signOut(); };
 $('#u-valores').onclick = tabelaValores;
+$('#u-sistema').onclick = abrirSistemaGuias;
 
 // Esqueci minha senha — envia link que funciona aqui ou em qualquer outro aparelho
 $('#a-esqueci').onclick = async ()=>{
@@ -1569,6 +1582,107 @@ async function onBusca(){
     g.__remnome = an ? `${an} › ${rn}` : rn;
   });
   pintarGuias(data||[], { buscaVazia:true });
+}
+
+/* ===================================================================
+   VISUALIZADOR (SÓ LEITURA) — Sistema Dedica Saúde de Guias
+   Puxa malas › pastas › guias do outro app (mesmo Supabase) e mostra
+   como gaveta/boneco. Não grava, não edita, não apaga NADA.
+   =================================================================== */
+const BUCKET_MALAS = 'malas';
+let _sgMala=null;
+function _seedSG(str){ let h=0; str=String(str||''); for(let i=0;i<str.length;i++){ h=(h*31 + str.charCodeAt(i))>>>0; } return h||1; }
+function sgFechar(){ const o=document.getElementById('sisguias'); if(o) o.remove(); }
+function sgOverlay(inner){
+  let o=document.getElementById('sisguias');
+  if(!o){ o=document.createElement('div'); o.id='sisguias'; document.body.appendChild(o); }
+  o.innerHTML = `<div class="sg-box">
+    <div class="sg-top">
+      <div class="sg-nav" id="sg-nav"></div>
+      <button class="btn branco" onclick="sgFechar()">✕ Fechar</button>
+    </div>
+    <div class="sg-body" id="sg-body">${inner||''}</div>
+  </div>`;
+}
+async function abrirSistemaGuias(){
+  sgOverlay(`<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`);
+  document.getElementById('sg-nav').innerHTML = `<b class="banger" style="font-size:22px">📥 Sistema de Guias</b> <span class="sg-tagro">só leitura</span>`;
+  const { data:malas, error } = await sb.from('malas').select('*').order('ordem',{ascending:true}).order('created_at',{ascending:true});
+  const body=document.getElementById('sg-body');
+  if(error){ body.innerHTML = `<div class="vazio"><div class="balao">Não consegui puxar: ${esc(error.message)}</div></div>`; return; }
+  let cont={};
+  const ids=(malas||[]).map(m=>m.id);
+  if(ids.length){ const {data:gs}=await sb.from('mala_guias').select('mala_id').in('mala_id',ids); (gs||[]).forEach(g=>cont[g.mala_id]=(cont[g.mala_id]||0)+1); }
+  let html='';
+  if(!malas||!malas.length){ html=`<div class="vazio"><div class="balao">Nenhuma mala no sistema novo ainda.</div></div>`; }
+  else{
+    html+='<div class="grade-cab">';
+    malas.forEach(m=>{
+      const n=cont[m.id]||0;
+      html+=`<div class="cab" data-mala="${esc(m.id)}" style="--tint:${esc(m.cor||'#4a90d9')}">
+        <div class="plate">${esc(m.nome||'Mala')}</div>
+        <div class="body"><div class="front"><div class="knob"></div></div><div class="front"><div class="knob"></div></div><div class="front"><div class="knob"></div></div></div>
+        <div class="meta">${n} ${n===1?'guia':'guias'}</div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  body.innerHTML=html;
+  body.querySelectorAll('[data-mala]').forEach(c=> c.onclick=()=> sgAbrirMala((malas||[]).find(m=>m.id===c.dataset.mala)) );
+}
+async function sgAbrirMala(mala){
+  if(!mala) return;
+  _sgMala = mala;
+  const body=document.getElementById('sg-body'); body.innerHTML=`<div class="vazio"><span class="spin" style="border-color:var(--tinta);border-top-color:transparent"></span></div>`;
+  document.getElementById('sg-nav').innerHTML = `<button class="btn branco" onclick="abrirSistemaGuias()">← Malas</button> <b>${esc(mala.nome||'Mala')}</b> <span class="sg-tagro">só leitura</span>`;
+  const { data:pastas } = await sb.from('mala_pastas').select('id,nome').eq('mala_id',mala.id);
+  const pnome={}; (pastas||[]).forEach(p=>pnome[p.id]=p.nome);
+  const { data:guias, error } = await sb.from('mala_guias').select('*').eq('mala_id',mala.id).order('ordem',{ascending:true}).order('created_at',{ascending:true});
+  if(error){ body.innerHTML=`<div class="vazio"><div class="balao">${esc(error.message)}</div></div>`; return; }
+  let html='<div class="grade">';
+  if(!guias||!guias.length){ html+=`<div class="vazio"><div class="balao">Sem guias nesta mala.</div></div>`; }
+  (guias||[]).forEach(g=>{
+    const cs=Array.isArray(g.carimbos)?g.carimbos:[];
+    const ult=cs.slice(-2).map(c=>c&&c.t).filter(Boolean);
+    html+=`<div class="pasta" data-guia="${esc(g.id)}">
+      <div class="aba"></div>
+      <div class="corpo">
+        <div class="boneco">${boneco(_seedSG(g.id))}</div>
+        <div class="nome">${esc(g.nome||'Guia')}</div>
+        ${(g.pasta_id&&pnome[g.pasta_id])?`<div class="remlbl">📁 ${esc(pnome[g.pasta_id])}</div>`:''}
+        <div class="tags">${g.arquivo_path?`<span class="tag clip">arquivo</span>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}${(g.meta&&g.meta.exames)?`<span class="tag" style="background:#e7ddff">exames</span>`:''}</div>
+        ${ult.length?`<div class="tags">${ult.map(t=>`<span class="selo-tag">${esc(String(t).toUpperCase())}</span>`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  body.innerHTML=html;
+  body.querySelectorAll('[data-guia]').forEach(c=> c.onclick=()=> sgAbrirGuia((guias||[]).find(g=>g.id===c.dataset.guia)) );
+}
+async function sgAbrirGuia(g){
+  if(!g) return;
+  const body=document.getElementById('sg-body'); if(!body) return;
+  document.getElementById('sg-nav').innerHTML = `<button class="btn branco" onclick="sgAbrirMala(_sgMala)">← ${esc((_sgMala&&_sgMala.nome)||'Mala')}</button> <b>${esc(g.nome||'Guia')}</b> <span class="sg-tagro">só leitura</span>`;
+  const cs=Array.isArray(g.carimbos)?g.carimbos:[];
+  const exames=(g.meta && g.meta.exames) || '';
+  body.innerHTML = `<div class="sg-detalhe">
+    <div class="sg-cabg"><div class="boneco" style="width:90px">${boneco(_seedSG(g.id))}</div>
+      <div><h2 class="banger" style="font-size:26px">${esc(g.nome||'Guia')}</h2>
+      ${cs.length?`<div class="tags">${cs.map(c=>`<span class="selo-tag">${esc(String(c&&c.t||'').toUpperCase())}${c&&c.n?(' '+esc(c.n)):''}</span>`).join('')}</div>`:''}</div>
+    </div>
+    <h3 style="margin:14px 0 6px" class="banger">Exames</h3>
+    <div class="sg-exames">${exames? esc(exames).replace(/\n/g,'<br>') : 'Sem exames lançados nesta guia ainda.'}</div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      ${g.arquivo_path?`<button class="btn azul" id="sg-pdf">📄 Abrir PDF</button>`:`<span class="tag" style="background:#eee">sem arquivo</span>`}
+      <button class="btn branco" onclick="sgAbrirMala(_sgMala)">Voltar</button>
+    </div>
+  </div>`;
+  const b=document.getElementById('sg-pdf');
+  if(b) b.onclick = async ()=>{
+    const { data, error } = await sb.storage.from(BUCKET_MALAS).createSignedUrl(g.arquivo_path, 180);
+    if(error){ toast('Erro ao abrir: '+error.message,'bad'); return; }
+    window.open(data.signedUrl, '_blank');
+  };
 }
 
 /* ===================================================================
