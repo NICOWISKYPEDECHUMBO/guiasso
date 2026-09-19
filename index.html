@@ -1661,6 +1661,12 @@ async function sgAbrirMala(mala){
   body.innerHTML=html;
   body.querySelectorAll('[data-guia]').forEach(c=> c.onclick=()=> sgAbrirGuia((guias||[]).find(g=>g.id===c.dataset.guia)) );
 }
+function _examesDoTexto(txt){
+  return String(txt||'').split(/\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+    const m=l.match(/(\d{8})\s*[-–]\s*(.+)$/);
+    return m ? {codigo:m[1], desc:m[2].trim(), raw:l} : {codigo:'', desc:l, raw:l};
+  }).filter(e=>e.desc);
+}
 function _mapExameImport(e){
   const consulta=/^10/.test(e.codigo||'');
   if(consulta){
@@ -1699,18 +1705,13 @@ async function sgImportarMala(mala){
     const g=pend[i];
     info(`Importando ${i+1} de ${pend.length}… (lendo PDF)`);
     try{
-      let nome=g.nome||'Guia', codigo=null, examesSug=[], file=null;
+      let nome=g.nome||'Guia', codigo=null, file=null;
+      const examesSug=_examesDoTexto((g.meta&&g.meta.exames)||'').map(_mapExameImport);
       if(g.arquivo_path){
         const {data:blob}=await sb.storage.from('malas').download(g.arquivo_path);
         if(blob){
           const ext=(g.arquivo_path.split('.').pop()||'pdf');
           file=new File([blob], `${nome.replace(/[^\w.\-]+/g,'_')}.${ext}`, {type:blob.type||'application/pdf'});
-          try{
-            const r=await lerGuiaOCR(file);
-            if(r.nome) nome=r.nome;
-            if(r.codigo) codigo=r.codigo;
-            examesSug=(r.exames||[]).map(_mapExameImport);
-          }catch(_){}
         }
       }
       const total=examesSug.reduce((s,x)=>s+(Number(x.valor)||0),0);
@@ -1733,36 +1734,53 @@ async function sgImportarMala(mala){
 }
 async function calcularGaveta(rem){
   if(!rem) return;
-  if(!confirm('Calcular as guias desta gaveta?\n\nLê o PDF de cada guia (OCR), casa os exames com a tabela de preços e atualiza o total. Não apaga nada — guias que não der pra ler ficam como estão.')) return;
+  if(!confirm('Calcular as guias desta gaveta?\n\nLê o PDF anexado de cada guia (OCR), casa os exames com a tabela de preços e soma. Não apaga nada — o que não der pra ler fica como está.')) return;
   const { data:guias, error } = await sb.from('guias').select('*').eq('remessa_id',rem.id).eq('arquivada',false);
   if(error){ toast('Erro: '+error.message,'bad'); return; }
   await carregarPrecos();
-  const o = abrirModal(`<h2>Calculando…</h2><p id="calc-status" style="font-weight:700">Preparando…</p>`);
-  const status = t => { const s=o.querySelector('#calc-status'); if(s) s.textContent=t; };
-  let feitas=0, semArq=0, semExame=0, falhas=0;
+  // reforço: exames já lidos no sistema novo (usados só se o OCR falhar)
+  const origIds=(guias||[]).map(g=>g.meta&&g.meta.origem_guia_id).filter(Boolean);
+  const mapNovo={};
+  if(origIds.length){
+    const {data:mg}=await sb.from('mala_guias').select('id,meta').in('id', origIds);
+    (mg||[]).forEach(x=> mapNovo[x.id]=(x.meta&&x.meta.exames)||'');
+  }
+  const o=abrirModal(`<h2>Calculando…</h2><p id="calc-status" style="font-weight:700">Preparando…</p>`);
+  const status=t=>{const s=o.querySelector('#calc-status'); if(s) s.textContent=t;};
+  let feitas=0, semExame=0;
   for(let i=0;i<(guias||[]).length;i++){
-    const g=guias[i];
-    status(`Lendo ${i+1} de ${guias.length}…  (${g.nome||'guia'})`);
-    if(!g.arquivo_path){ semArq++; continue; }
-    try{
-      const { data:blob } = await sb.storage.from(BUCKET).download(g.arquivo_path);
-      if(!blob){ falhas++; continue; }
-      const ext=(g.arquivo_path.split('.').pop()||'pdf');
-      const file=new File([blob], `g.${ext}`, {type:blob.type||'application/pdf'});
-      const r=await lerGuiaOCR(file);
-      const exames=(r.exames||[]).map(_mapExameImport);
-      if(!exames.length){ semExame++; continue; }        // NÃO zera: mantém o que já tinha
-      const total=exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
-      const meta=Object.assign({}, g.meta||{}, { exames, total });
-      const upd={ meta };
-      if(r.nome && !g.nome) upd.nome=r.nome;
-      if(r.codigo && !g.codigo_siass) upd.codigo_siass=r.codigo;
-      await sb.from('guias').update(upd).eq('id',g.id);
-      feitas++;
-    }catch(err){ console.warn('calc', err); falhas++; }
+    const g=guias[i]; status(`Lendo ${i+1} de ${guias.length}…  (${g.nome||'guia'})`);
+    let brutos=[], nomeOCR='', codOCR='';
+    // 1) OCR do PDF anexado (do jeito do antigo)
+    if(g.arquivo_path){
+      try{
+        const { data:blob } = await sb.storage.from(BUCKET).download(g.arquivo_path);
+        if(blob){
+          const ext=(g.arquivo_path.split('.').pop()||'pdf');
+          const file=new File([blob], `g.${ext}`, {type:blob.type||'application/pdf'});
+          const r=await lerGuiaOCR(file);
+          nomeOCR=r.nome||''; codOCR=r.codigo||'';
+          brutos=(r.exames||[]).map(e=>({codigo:e.codigo,desc:e.desc,raw:e.raw}));
+        }
+      }catch(err){ console.warn('ocr', err); }
+    }
+    // 2) se o OCR não achou, usa os exames que o novo já leu
+    if(!brutos.length){
+      const oid=g.meta&&g.meta.origem_guia_id;
+      if(oid && mapNovo[oid]) brutos=_examesDoTexto(mapNovo[oid]);
+    }
+    if(!brutos.length){ semExame++; continue; }   // NÃO zera
+    const exames=brutos.map(_mapExameImport);
+    const total=exames.reduce((s,x)=> s + (Number(x.valor)||0), 0);
+    const meta=Object.assign({}, g.meta||{}, { exames, total });
+    const upd={ meta };
+    if(nomeOCR && !g.nome) upd.nome=nomeOCR;
+    if(codOCR && !g.codigo_siass) upd.codigo_siass=codOCR;
+    await sb.from('guias').update(upd).eq('id',g.id);
+    feitas++;
   }
   fecharModal();
-  toast(`${feitas} calculada(s)${semArq?` · ${semArq} sem arquivo`:''}${semExame?` · ${semExame} sem exame lido`:''}${falhas?` · ${falhas} com erro`:''}.`,'ok');
+  toast(`${feitas} calculada(s)${semExame?` · ${semExame} sem exame lido`:''}.`,'ok');
   await renderGuias(rem);
 }
 async function sgAbrirGuia(g){
